@@ -1,6 +1,9 @@
 from openai import OpenAI
+from rich.console import Console
+from rich.markdown import Markdown
 
 client = OpenAI()
+console = Console()
 
 MODEL = "gpt-5.1"
 
@@ -21,23 +24,17 @@ def main():
 
 		messages.append({"role":"user", "content":user_input})
 
-		stream = client.chat.completions.create(
+		response = client.chat.completions.create(
 			model=MODEL,
-			messages=messages,
-			stream=True
+			messages=messages
 		)
 
-		message = ""
-		print(f"{ASSISTANT_COLOR}GPT: ")
-
-		for chunk in stream:
-			if chunk.choices[0].delta.content:
-				print(chunk.choices[0].delta.content, end="", flush=True)
-				message += chunk.choices[0].delta.content
-
+		message = response.choices[0].message.content
+		print(f"{ASSISTANT_COLOR}GPT:")
+		console.print(Markdown(message))
+		print(f"{RESET_COLOR}")
 
 		messages.append({"role": "assistant", "content": message})
-		print(RESET_COLOR)
 
 if __name__ == "__main__":
 	main()
