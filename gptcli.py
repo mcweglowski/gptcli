@@ -20,6 +20,40 @@ RESET_COLOR = "\033[0m"
 
 CONVERSATIONS_DIR = "conversations"
 
+# Pricing per 1M tokens (input/output) for different models
+# Update these based on actual OpenAI pricing
+MODEL_PRICING = {
+	"gpt-5.1": {"input": 2.50, "output": 10.00},  # Example pricing, adjust as needed
+	"gpt-4": {"input": 30.00, "output": 60.00},
+	"gpt-3.5-turbo": {"input": 0.50, "output": 1.50},
+}
+
+
+def calculate_cost(model, input_tokens, output_tokens):
+	"""Calculate cost based on model and token usage."""
+	if model not in MODEL_PRICING:
+		return None
+	pricing = MODEL_PRICING[model]
+	input_cost = (input_tokens / 1_000_000) * pricing["input"]
+	output_cost = (output_tokens / 1_000_000) * pricing["output"]
+	return input_cost + output_cost
+
+
+def format_statistics(input_tokens, output_tokens, total_tokens, cost, elapsed_time):
+	"""Format statistics for display."""
+	stats = []
+	
+	if total_tokens:
+		stats.append(f"Tokens: {total_tokens:,} ({input_tokens:,} in / {output_tokens:,} out)")
+	
+	if cost is not None:
+		stats.append(f"Cost: ${cost:.6f}")
+	
+	if elapsed_time:
+		stats.append(f"Time: {elapsed_time:.2f}s")
+	
+	return " | ".join(stats) if stats else ""
+
 
 def get_conversation_path(chat_name):
 	"""Returns the path to the conversation file."""
@@ -93,17 +127,69 @@ def main():
 		full_response = ""
 		print(f"{ASSISTANT_COLOR}GPT: {RESET_COLOR}")
 		
+		# Track statistics
+		start_time = time.time()
+		input_tokens = 0
+		output_tokens = 0
+		total_tokens = 0
+		usage_info = None
+		
 		try:
-			# Try streaming mode
-			stream = client.responses.create(
-				model=MODEL,
-				input=api_messages,
-				stream=True
-			)
+			# Show progress bar while waiting for stream to start
+			with Progress(
+				SpinnerColumn(),
+				TextColumn("[progress.description]{task.description}"),
+				TimeElapsedColumn(),
+				console=console,
+				transient=True
+			) as progress:
+				task = progress.add_task("[cyan]Thinking...", total=None)
+				# Start streaming request
+				stream = client.responses.create(
+					model=MODEL,
+					input=api_messages,
+					stream=True
+				)
+				# Get first event to know when stream starts
+				stream_iter = iter(stream)
+				first_event = next(stream_iter, None)
 			
-			# Stream response token by token
+			# Stream response token by token with Live display
 			with Live(console=console, refresh_per_second=10) as live:
-				for event in stream:
+				# Process first event if we got it
+				# Look for usage information in events
+				if first_event:
+					event = first_event
+					text = ""
+					
+					event_type = getattr(event, 'type', '')
+					
+					# For text delta events, extract the delta attribute
+					if isinstance(event_type, str) and ('text.delta' in event_type or 'output_text.delta' in event_type):
+						if hasattr(event, 'delta'):
+							delta_value = event.delta
+							if delta_value is not None:
+								text = str(delta_value)
+					elif hasattr(event, 'delta'):
+						delta = event.delta
+						if delta is not None:
+							if isinstance(delta, str):
+								text = delta
+							elif hasattr(delta, 'content'):
+								text = str(delta.content) if delta.content else ""
+							else:
+								text = str(delta)
+					elif hasattr(event, 'output_text'):
+						text = str(event.output_text) if event.output_text else ""
+					elif isinstance(event, dict):
+						text = event.get('delta', event.get('output_text', event.get('content', '')))
+					
+					if text:
+						full_response += text
+						live.update(Markdown(full_response))
+				
+				# Process remaining events
+				for event in stream_iter:
 					text = ""
 					
 					# Debug: print event type and attributes (remove after debugging)
@@ -136,12 +222,42 @@ def main():
 						full_response += text
 						# Update live display with accumulated response
 						live.update(Markdown(full_response))
+					
+					# Check for usage information in events
+					if hasattr(event, 'usage'):
+						usage_info = event.usage
+					elif hasattr(event, 'response') and hasattr(event.response, 'usage'):
+						usage_info = event.response.usage
+			
+			# Extract usage information from stream if available
+			# Try to get it from the stream object or last event
+			if hasattr(stream, 'usage'):
+				usage_info = stream.usage
 			
 			# Print final response (in case Live didn't preserve it)
 			if full_response:
 				console.print(Markdown(full_response))
 			else:
 				print(f"{RESET_COLOR}No response received.{RESET_COLOR}")
+			
+			# Extract token information from usage
+			if usage_info:
+				if hasattr(usage_info, 'input_tokens'):
+					input_tokens = usage_info.input_tokens
+				elif isinstance(usage_info, dict):
+					input_tokens = usage_info.get('input_tokens', usage_info.get('prompt_tokens', 0))
+				
+				if hasattr(usage_info, 'output_tokens'):
+					output_tokens = usage_info.output_tokens
+				elif isinstance(usage_info, dict):
+					output_tokens = usage_info.get('output_tokens', usage_info.get('completion_tokens', 0))
+				
+				if hasattr(usage_info, 'total_tokens'):
+					total_tokens = usage_info.total_tokens
+				elif isinstance(usage_info, dict):
+					total_tokens = usage_info.get('total_tokens', input_tokens + output_tokens)
+				else:
+					total_tokens = input_tokens + output_tokens
 			
 		except APIError as e:
 			# Handle API errors (rate limits, token limits, etc.)
@@ -169,10 +285,45 @@ def main():
 					)
 					full_response = response.output_text
 					console.print(Markdown(full_response))
+					
+					# Extract usage information from response
+					if hasattr(response, 'usage'):
+						usage_info = response.usage
+					elif hasattr(response, 'response') and hasattr(response.response, 'usage'):
+						usage_info = response.response.usage
+					
+					if usage_info:
+						if hasattr(usage_info, 'input_tokens'):
+							input_tokens = usage_info.input_tokens
+						elif isinstance(usage_info, dict):
+							input_tokens = usage_info.get('input_tokens', usage_info.get('prompt_tokens', 0))
+						
+						if hasattr(usage_info, 'output_tokens'):
+							output_tokens = usage_info.output_tokens
+						elif isinstance(usage_info, dict):
+							output_tokens = usage_info.get('output_tokens', usage_info.get('completion_tokens', 0))
+						
+						if hasattr(usage_info, 'total_tokens'):
+							total_tokens = usage_info.total_tokens
+						elif isinstance(usage_info, dict):
+							total_tokens = usage_info.get('total_tokens', input_tokens + output_tokens)
+						else:
+							total_tokens = input_tokens + output_tokens
 				except APIError as api_err:
 					print(f"{RESET_COLOR}Error: {api_err.message}{RESET_COLOR}")
 					messages.pop()  # Remove the user message that failed
 					continue
+		
+		# Calculate elapsed time
+		elapsed_time = time.time() - start_time
+		
+		# Calculate cost
+		cost = calculate_cost(MODEL, input_tokens, output_tokens) if total_tokens > 0 else None
+		
+		# Display statistics
+		stats = format_statistics(input_tokens, output_tokens, total_tokens, cost, elapsed_time)
+		if stats:
+			console.print(f"[dim]{stats}[/dim]")
 		
 		print(RESET_COLOR, end="")
 
