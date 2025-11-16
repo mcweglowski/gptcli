@@ -25,7 +25,7 @@ def get_conversation_path(chat_name):
 
 
 def load_conversation(chat_name):
-	"""Loads conversation from file and returns the last 10 messages."""
+	"""Loads all conversation messages from file."""
 	file_path = get_conversation_path(chat_name)
 	if not os.path.exists(file_path):
 		return []
@@ -39,8 +39,8 @@ def load_conversation(chat_name):
 		# Ensure it's a list
 		if not isinstance(data, list):
 			return []
-		# Return the last 10 messages
-		return data[-10:] if len(data) > 10 else data
+		# Return all messages (we'll use last 10 for API, but save all)
+		return data
 	except (json.JSONDecodeError, IOError):
 		return []
 
@@ -82,9 +82,12 @@ def main():
 
 		messages.append({"role": "user", "content":user_input})
 
+		# Use only last 10 messages for API to avoid token limits
+		api_messages = messages[-10:] if len(messages) > 10 else messages
+
 		response = client.responses.create(
 			model=MODEL,
-			input=messages
+			input=api_messages
 		)
 
 		print(f"{ASSISTANT_COLOR}GPT: ")
@@ -95,7 +98,7 @@ def main():
 		
 		# Save after receiving response
 		if chat_name:
-			save_conversation(chat_name, response.output_text)
+			save_conversation(chat_name, messages)
 
 if __name__ == "__main__":
 	main()
