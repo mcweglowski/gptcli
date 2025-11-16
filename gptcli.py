@@ -80,12 +80,16 @@ def main():
 		if chat_name:
 			save_conversation(chat_name, messages)
 
-		response = client.chat.completions.create(
-			model=MODEL,
-			messages=messages
+		# Use /v1/responses endpoint via OpenAI client's internal HTTP client
+		response = client._client.post(
+			"/v1/responses",
+			json={
+				"model": MODEL,
+				"messages": messages
+			}
 		)
-
-		message = response.choices[0].message.content
+		response_data = response.json()
+		message = response_data["choices"][0]["message"]["content"]
 		print(f"{ASSISTANT_COLOR}GPT:")
 		console.print(Markdown(message))
 		print(RESET_COLOR, end="")
