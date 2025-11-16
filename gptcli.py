@@ -1,9 +1,11 @@
 import argparse
 import json
 import os
+import time
 from openai import OpenAI
 from rich.console import Console
 from rich.markdown import Markdown
+from rich.progress import Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 
 client = OpenAI()
 console = Console()
@@ -85,10 +87,19 @@ def main():
 		# Use only last 10 messages for API to avoid token limits
 		api_messages = messages[-10:] if len(messages) > 10 else messages
 
-		response = client.responses.create(
-			model=MODEL,
-			input=api_messages
-		)
+		# Show progress bar while waiting for response
+		with Progress(
+			SpinnerColumn(),
+			TextColumn("[progress.description]{task.description}"),
+			TimeElapsedColumn(),
+			console=console,
+			transient=True
+		) as progress:
+			task = progress.add_task("[cyan]Thinking...", total=None)
+			response = client.responses.create(
+				model=MODEL,
+				input=api_messages
+			)
 
 		print(f"{ASSISTANT_COLOR}GPT: ")
 		console.print(Markdown(response.output_text))
