@@ -32,9 +32,15 @@ def load_conversation(chat_name):
 	
 	try:
 		with open(file_path, 'r', encoding='utf-8') as f:
-			messages = json.load(f)
+			data = json.load(f)
+		# Handle legacy format where file might contain a string instead of list
+		if isinstance(data, str):
+			return []
+		# Ensure it's a list
+		if not isinstance(data, list):
+			return []
 		# Return the last 10 messages
-		return messages[-10:] if len(messages) > 10 else messages
+		return data[-10:] if len(data) > 10 else data
 	except (json.JSONDecodeError, IOError):
 		return []
 
@@ -74,31 +80,22 @@ def main():
 
 		print(RESET_COLOR)
 
-		messages.append({"role":"user", "content":user_input})
-		
-		# Save after adding user message
-		if chat_name:
-			save_conversation(chat_name, messages)
+		messages.append({"role": "user", "content":user_input})
 
-		# Use /v1/responses endpoint via OpenAI client's internal HTTP client
-		response = client._client.post(
-			"/v1/responses",
-			json={
-				"model": MODEL,
-				"messages": messages
-			}
+		response = client.responses.create(
+			model=MODEL,
+			input=messages
 		)
-		response_data = response.json()
-		message = response_data["choices"][0]["message"]["content"]
-		print(f"{ASSISTANT_COLOR}GPT:")
-		console.print(Markdown(message))
+
+		print(f"{ASSISTANT_COLOR}GPT: ")
+		console.print(Markdown(response.output_text))
 		print(RESET_COLOR, end="")
 
-		messages.append({"role": "assistant", "content": message})
+		messages.append({"role": "assistant", "content": response.output_text})
 		
 		# Save after receiving response
 		if chat_name:
-			save_conversation(chat_name, messages)
+			save_conversation(chat_name, response.output_text)
 
 if __name__ == "__main__":
 	main()
