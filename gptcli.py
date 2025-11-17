@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import time
+from copy import deepcopy
 from openai import OpenAI
 from openai import APIError
 from rich.console import Console
@@ -12,21 +13,53 @@ from rich.live import Live
 client = OpenAI()
 console = Console()
 
-MODEL = "gpt-5.1"
-
 USER_COLOR = "\033[96m"
 ASSISTANT_COLOR = "\033[92m"
 RESET_COLOR = "\033[0m"
 
 CONVERSATIONS_DIR = "conversations"
+CONFIG_PATH = os.environ.get("GPTCLI_CONFIG_PATH", "config.json")
 
-# Pricing per 1M tokens (input/output) for different models
-# Update these based on actual OpenAI pricing
-MODEL_PRICING = {
-	"gpt-5.1": {"input": 2.50, "output": 10.00},  # Example pricing, adjust as needed
-	"gpt-4": {"input": 30.00, "output": 60.00},
-	"gpt-3.5-turbo": {"input": 0.50, "output": 1.50},
+DEFAULT_CONFIG = {
+	"default_model": "gpt-5.1",
+	"pricing": {
+		"gpt-5.1": {"input": 2.50, "output": 10.00}
+	}
 }
+
+
+def ensure_config_file():
+	"""Create config file with defaults if it doesn't exist."""
+	if os.path.exists(CONFIG_PATH):
+		return
+	try:
+		with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
+			json.dump(DEFAULT_CONFIG, f, ensure_ascii=False, indent=2)
+	except IOError:
+		print(f"{RESET_COLOR}Warning: Could not write config file at {CONFIG_PATH}. Using defaults only.")
+
+
+def load_config():
+	"""Load configuration from file or fall back to defaults."""
+	ensure_config_file()
+	try:
+		with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+			data = json.load(f)
+	except (IOError, json.JSONDecodeError):
+		return deepcopy(DEFAULT_CONFIG)
+	
+	config = deepcopy(DEFAULT_CONFIG)
+	if isinstance(data, dict):
+		if isinstance(data.get("pricing"), dict):
+			config["pricing"].update(data["pricing"])
+		if isinstance(data.get("default_model"), str):
+			config["default_model"] = data["default_model"]
+	return config
+
+
+CONFIG = load_config()
+MODEL = CONFIG.get("default_model", DEFAULT_CONFIG["default_model"])
+MODEL_PRICING = CONFIG.get("pricing", DEFAULT_CONFIG["pricing"])
 
 
 def calculate_cost(model, input_tokens, output_tokens):
@@ -187,8 +220,10 @@ def main():
 			print(f"{ASSISTANT_COLOR}Loaded conversation: {chat_name} ({len(messages)} messages){RESET_COLOR}")
 		else:
 			print(f"{ASSISTANT_COLOR}Starting new conversation: {chat_name}{RESET_COLOR}")
+		print(f"{ASSISTANT_COLOR}Using model: {MODEL}{RESET_COLOR}")
 	else:
 		print("Console GPT chat (temporary conversation - not saved). Type 'exit' or 'quit' to finish.")
+		print(f"{ASSISTANT_COLOR}Using model: {MODEL}{RESET_COLOR}")
 	
 	while True:
 		user_input = input(f"{USER_COLOR}You: ")
