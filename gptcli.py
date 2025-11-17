@@ -15,6 +15,7 @@ console = Console()
 
 USER_COLOR = "\033[96m"
 ASSISTANT_COLOR = "\033[92m"
+INFO_COLOR = "\033[95m"
 RESET_COLOR = "\033[0m"
 
 CONVERSATIONS_DIR = "conversations"
@@ -256,20 +257,114 @@ def main():
 	elif chat_config.get("model"):
 		current_model = chat_config["model"]
 	
-	# Load conversation if chat name is provided
-	if chat_name:
-		messages = load_conversation(chat_name)
-		if messages:
-			print(f"{ASSISTANT_COLOR}Loaded conversation: {chat_name} ({len(messages)} messages){RESET_COLOR}")
+	def announce_chat():
+		if chat_name:
+			info = f"{INFO_COLOR}Chat: {chat_name}"
+			print(f"{info}{RESET_COLOR}")
+			if messages:
+				print(f"{ASSISTANT_COLOR}Loaded conversation: {chat_name} ({len(messages)} messages){RESET_COLOR}")
+			else:
+				print(f"{ASSISTANT_COLOR}Starting new conversation: {chat_name}{RESET_COLOR}")
 		else:
-			print(f"{ASSISTANT_COLOR}Starting new conversation: {chat_name}{RESET_COLOR}")
+			print(f"{INFO_COLOR}Console GPT chat (temporary conversation - not saved). Type 'quit' to finish.{RESET_COLOR}")
 		print(f"{ASSISTANT_COLOR}Using model: {current_model}{RESET_COLOR}")
+
+	def print_info(message):
+		print(f"{INFO_COLOR}{message}{RESET_COLOR}")
+
+	def load_chat(new_chat_name):
+		nonlocal chat_name, chat_config, messages, current_model
+		chat_name = new_chat_name
+		messages.clear()
+		chat_config = {}
+		if chat_name:
+			chat_config = load_chat_config(chat_name)
+			messages.extend(load_conversation(chat_name))
+			if chat_config.get("model"):
+				current_model = chat_config["model"]
+			else:
+				current_model = DEFAULT_MODEL
+		else:
+			current_model = DEFAULT_MODEL
+		announce_chat()
+
+	if chat_name:
+		load_chat(chat_name)
+		if args.model:
+			current_model = args.model
+			chat_config["model"] = current_model
+			save_chat_config(chat_name, chat_config)
+			print_info(f"Model for chat '{chat_name}' set to {current_model}.")
 	else:
-		print("Console GPT chat (temporary conversation - not saved). Type 'exit' or 'quit' to finish.")
-		print(f"{ASSISTANT_COLOR}Using model: {current_model}{RESET_COLOR}")
+		announce_chat()
+
+	def handle_command(command_line):
+		nonlocal current_model
+		stripped = command_line[1:].strip()
+		if not stripped:
+			print_info("Empty command.")
+			return True, False
+		parts = stripped.split()
+		command = parts[0].lower()
+		args_list = parts[1:]
+
+		if command == "quit":
+			return True, True
+
+		if command == "change-model":
+			if not args_list:
+				print_info("Usage: /change-model <model_name>")
+				return True, False
+			new_model = args_list[0]
+			current_model = new_model
+			if chat_name:
+				chat_config["model"] = new_model
+				save_chat_config(chat_name, chat_config)
+				print_info(f"Model for chat '{chat_name}' set to {new_model}.")
+			else:
+				print_info(f"Using model {new_model} for temporary conversation.")
+			return True, False
+
+		if command == "list-chats":
+			if not os.path.exists(CONVERSATIONS_DIR):
+				print_info("No conversations found.")
+				return True, False
+			chats = []
+			for entry in os.listdir(CONVERSATIONS_DIR):
+				full_path = os.path.join(CONVERSATIONS_DIR, entry)
+				if os.path.isdir(full_path):
+					continue
+				if entry.endswith(".config.json"):
+					continue
+				if entry.endswith(".json"):
+					chats.append(entry[:-5])
+			if chats:
+				print_info("Available chats:")
+				for c in sorted(chats):
+					print_info(f" - {c}")
+			else:
+				print_info("No conversations found.")
+			return True, False
+
+		if command == "switch-chat":
+			if not args_list:
+				print_info("Usage: /switch-chat <chat_name>")
+				return True, False
+			target = args_list[0]
+			load_chat(target)
+			return True, False
+
+		print_info(f"Unknown command: /{command}")
+		return True, False
 	
 	while True:
 		user_input = input(f"{USER_COLOR}You: ")
+		if user_input.startswith("/"):
+			handled, should_exit = handle_command(user_input)
+			if should_exit:
+				break
+			if handled:
+				continue
 		if user_input.lower() in ("exit", "quit"):
 			break
 
