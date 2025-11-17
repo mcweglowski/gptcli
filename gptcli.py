@@ -240,7 +240,47 @@ def main():
 	parser = argparse.ArgumentParser(description='Console GPT chat')
 	parser.add_argument('--chat-name', '-n', type=str, help='Chat name (optional)')
 	parser.add_argument('--model', type=str, help='Override model for this chat session')
+	parser.add_argument('--list-chats', action='store_true', help='List available chats and exit')
 	args = parser.parse_args()
+
+	def get_available_chats():
+		if not os.path.exists(CONVERSATIONS_DIR):
+			return []
+		chats = []
+		for entry in os.listdir(CONVERSATIONS_DIR):
+			full_path = os.path.join(CONVERSATIONS_DIR, entry)
+			if os.path.isdir(full_path):
+				continue
+			if entry.endswith(".config.json"):
+				continue
+			if entry.endswith(".json"):
+				chats.append(entry[:-5])
+		metadata = []
+		for chat in chats:
+			config = load_chat_config(chat)
+			model = config.get("model", DEFAULT_MODEL)
+			conversation = load_conversation(chat)
+			metadata.append({
+				"name": chat,
+				"model": model,
+				"message_count": len(conversation)
+			})
+		return sorted(metadata, key=lambda item: item["name"])
+
+	def format_chat_entry(chat):
+		name = chat["name"] if len(chat["name"]) <= 24 else chat["name"][:21] + "..."
+		model = chat["model"]
+		return f"{name:<24} | {model:<16} | messages: {chat['message_count']:>5}"
+
+	if args.list_chats:
+		chats = get_available_chats()
+		if chats:
+			print(f"{INFO_COLOR}Available chats:{RESET_COLOR}")
+			for chat in chats:
+				print(f"{INFO_COLOR} - {format_chat_entry(chat)}{RESET_COLOR}")
+		else:
+			print(f"{INFO_COLOR}No conversations found.{RESET_COLOR}")
+		return
 	
 	chat_name = args.chat_name
 	messages = []
@@ -326,22 +366,11 @@ def main():
 			return True, False
 
 		if command == "list-chats":
-			if not os.path.exists(CONVERSATIONS_DIR):
-				print_info("No conversations found.")
-				return True, False
-			chats = []
-			for entry in os.listdir(CONVERSATIONS_DIR):
-				full_path = os.path.join(CONVERSATIONS_DIR, entry)
-				if os.path.isdir(full_path):
-					continue
-				if entry.endswith(".config.json"):
-					continue
-				if entry.endswith(".json"):
-					chats.append(entry[:-5])
+			chats = get_available_chats()
 			if chats:
 				print_info("Available chats:")
-				for c in sorted(chats):
-					print_info(f" - {c}")
+				for chat in chats:
+					print_info(f" - {format_chat_entry(chat)}")
 			else:
 				print_info("No conversations found.")
 			return True, False
