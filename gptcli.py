@@ -58,7 +58,7 @@ def load_config():
 
 
 CONFIG = load_config()
-MODEL = CONFIG.get("default_model", DEFAULT_CONFIG["default_model"])
+DEFAULT_MODEL = CONFIG.get("default_model", DEFAULT_CONFIG["default_model"])
 MODEL_PRICING = CONFIG.get("pricing", DEFAULT_CONFIG["pricing"])
 
 
@@ -104,6 +104,36 @@ def get_stats_path(chat_name):
 	if not os.path.exists(stats_dir):
 		os.makedirs(stats_dir)
 	return os.path.join(stats_dir, f"{chat_name}.json")
+
+
+def get_chat_config_path(chat_name):
+	"""Returns the path to per-chat configuration."""
+	if not os.path.exists(CONVERSATIONS_DIR):
+		os.makedirs(CONVERSATIONS_DIR)
+	return os.path.join(CONVERSATIONS_DIR, f"{chat_name}.config.json")
+
+
+def load_chat_config(chat_name):
+	"""Loads per-chat configuration."""
+	file_path = get_chat_config_path(chat_name)
+	if not os.path.exists(file_path):
+		return {}
+	try:
+		with open(file_path, "r", encoding="utf-8") as f:
+			data = json.load(f)
+			return data if isinstance(data, dict) else {}
+	except (json.JSONDecodeError, IOError):
+		return {}
+
+
+def save_chat_config(chat_name, config):
+	"""Saves per-chat configuration."""
+	file_path = get_chat_config_path(chat_name)
+	try:
+		with open(file_path, "w", encoding="utf-8") as f:
+			json.dump(config, f, ensure_ascii=False, indent=2)
+	except IOError:
+		print(f"{RESET_COLOR}Warning: Could not save chat config to {file_path}")
 
 
 def load_statistics(chat_name):
@@ -207,11 +237,24 @@ def save_conversation(chat_name, messages):
 
 def main():
 	parser = argparse.ArgumentParser(description='Console GPT chat')
-	parser.add_argument('--chat', '-c', type=str, help='Chat name (optional)')
+	parser.add_argument('--chat-name', '-n', type=str, help='Chat name (optional)')
+	parser.add_argument('--model', type=str, help='Override model for this chat session')
 	args = parser.parse_args()
 	
-	chat_name = args.chat
+	chat_name = args.chat_name
 	messages = []
+	chat_config = {}
+	if chat_name:
+		chat_config = load_chat_config(chat_name)
+	
+	current_model = DEFAULT_MODEL
+	if args.model:
+		current_model = args.model
+		if chat_name:
+			chat_config["model"] = current_model
+			save_chat_config(chat_name, chat_config)
+	elif chat_config.get("model"):
+		current_model = chat_config["model"]
 	
 	# Load conversation if chat name is provided
 	if chat_name:
@@ -220,10 +263,10 @@ def main():
 			print(f"{ASSISTANT_COLOR}Loaded conversation: {chat_name} ({len(messages)} messages){RESET_COLOR}")
 		else:
 			print(f"{ASSISTANT_COLOR}Starting new conversation: {chat_name}{RESET_COLOR}")
-		print(f"{ASSISTANT_COLOR}Using model: {MODEL}{RESET_COLOR}")
+		print(f"{ASSISTANT_COLOR}Using model: {current_model}{RESET_COLOR}")
 	else:
 		print("Console GPT chat (temporary conversation - not saved). Type 'exit' or 'quit' to finish.")
-		print(f"{ASSISTANT_COLOR}Using model: {MODEL}{RESET_COLOR}")
+		print(f"{ASSISTANT_COLOR}Using model: {current_model}{RESET_COLOR}")
 	
 	while True:
 		user_input = input(f"{USER_COLOR}You: ")
@@ -260,7 +303,7 @@ def main():
 				task = progress.add_task("[cyan]Thinking...", total=None)
 				# Start streaming request
 				stream = client.responses.create(
-					model=MODEL,
+					model=current_model,
 					input=api_messages,
 					stream=True
 				)
@@ -397,7 +440,7 @@ def main():
 				task = progress.add_task("[cyan]Thinking...", total=None)
 				try:
 					response = client.responses.create(
-						model=MODEL,
+						model=current_model,
 						input=api_messages
 					)
 					full_response = response.output_text
@@ -435,7 +478,7 @@ def main():
 		elapsed_time = time.time() - start_time
 		
 		# Calculate cost
-		cost = calculate_cost(MODEL, input_tokens, output_tokens) if total_tokens > 0 else None
+		cost = calculate_cost(current_model, input_tokens, output_tokens) if total_tokens > 0 else None
 		
 		# Display statistics
 		stats = format_statistics(input_tokens, output_tokens, total_tokens, cost, elapsed_time)
