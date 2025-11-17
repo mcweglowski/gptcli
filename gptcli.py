@@ -62,6 +62,85 @@ def get_conversation_path(chat_name):
 	return os.path.join(CONVERSATIONS_DIR, f"{chat_name}.json")
 
 
+def get_stats_path(chat_name):
+	"""Returns the path to the statistics file."""
+	if not os.path.exists(CONVERSATIONS_DIR):
+		os.makedirs(CONVERSATIONS_DIR)
+	# Create statistics subdirectory
+	stats_dir = os.path.join(CONVERSATIONS_DIR, "statistics")
+	if not os.path.exists(stats_dir):
+		os.makedirs(stats_dir)
+	return os.path.join(stats_dir, f"{chat_name}.json")
+
+
+def load_statistics(chat_name):
+	"""Loads statistics from file."""
+	file_path = get_stats_path(chat_name)
+	if not os.path.exists(file_path):
+		return {
+			"total_input_tokens": 0,
+			"total_output_tokens": 0,
+			"total_tokens": 0,
+			"total_cost": 0.0,
+			"total_time": 0.0,
+			"request_count": 0
+		}
+	
+	try:
+		with open(file_path, 'r', encoding='utf-8') as f:
+			data = json.load(f)
+		# Ensure all required fields exist
+		stats = {
+			"total_input_tokens": data.get("total_input_tokens", 0),
+			"total_output_tokens": data.get("total_output_tokens", 0),
+			"total_tokens": data.get("total_tokens", 0),
+			"total_cost": data.get("total_cost", 0.0),
+			"total_time": data.get("total_time", 0.0),
+			"request_count": data.get("request_count", 0)
+		}
+		return stats
+	except (json.JSONDecodeError, IOError):
+		# Return default stats if file is corrupted
+		return {
+			"total_input_tokens": 0,
+			"total_output_tokens": 0,
+			"total_tokens": 0,
+			"total_cost": 0.0,
+			"total_time": 0.0,
+			"request_count": 0
+		}
+
+
+def save_statistics(chat_name, stats):
+	"""Saves statistics to file."""
+	file_path = get_stats_path(chat_name)
+	try:
+		with open(file_path, 'w', encoding='utf-8') as f:
+			json.dump(stats, f, ensure_ascii=False, indent=2)
+	except IOError:
+		print(f"{RESET_COLOR}Error: Could not save statistics to {file_path}")
+
+
+def update_statistics(chat_name, input_tokens, output_tokens, total_tokens, cost, elapsed_time):
+	"""Updates statistics for a conversation."""
+	if not chat_name:
+		return  # Don't save stats for temporary conversations
+	
+	stats = load_statistics(chat_name)
+	
+	# Add new statistics
+	stats["total_input_tokens"] += input_tokens
+	stats["total_output_tokens"] += output_tokens
+	stats["total_tokens"] += total_tokens
+	if cost is not None:
+		stats["total_cost"] += cost
+	stats["total_time"] += elapsed_time
+	stats["request_count"] += 1
+	
+	# Save updated statistics
+	save_statistics(chat_name, stats)
+
+
 def load_conversation(chat_name):
 	"""Loads all conversation messages from file."""
 	file_path = get_conversation_path(chat_name)
@@ -156,6 +235,7 @@ def main():
 			
 			# Stream response token by token with Live display
 			with Live(console=console, refresh_per_second=10) as live:
+				response_displayed = False
 				# Process first event if we got it
 				# Look for usage information in events
 				if first_event:
@@ -222,6 +302,7 @@ def main():
 						full_response += text
 						# Update live display with accumulated response
 						live.update(Markdown(full_response))
+						response_displayed = True
 					
 					# Check for usage information in events
 					if hasattr(event, 'usage'):
@@ -234,11 +315,12 @@ def main():
 			if hasattr(stream, 'usage'):
 				usage_info = stream.usage
 			
-			# Print final response (in case Live didn't preserve it)
-			if full_response:
-				console.print(Markdown(full_response))
-			else:
+			# If nothing was streamed, let the user know
+			if not full_response:
 				print(f"{RESET_COLOR}No response received.{RESET_COLOR}")
+			elif not response_displayed:
+				# Fallback: show the accumulated response if Live didn't render
+				console.print(Markdown(full_response))
 			
 			# Extract token information from usage
 			if usage_info:
@@ -332,6 +414,8 @@ def main():
 		# Save after receiving response
 		if chat_name:
 			save_conversation(chat_name, messages)
+			# Update and save statistics
+			update_statistics(chat_name, input_tokens, output_tokens, total_tokens, cost, elapsed_time)
 
 if __name__ == "__main__":
 	main()
