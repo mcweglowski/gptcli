@@ -282,7 +282,8 @@ def main():
 
 		# Try streaming first, fallback to regular if not supported
 		full_response = ""
-		print(f"{ASSISTANT_COLOR}GPT: {RESET_COLOR}")
+		header_chat = chat_name if chat_name else "temp"
+		print(f"{ASSISTANT_COLOR}GPT({header_chat}|{current_model}): {RESET_COLOR}")
 		
 		# Track statistics
 		start_time = time.time()
