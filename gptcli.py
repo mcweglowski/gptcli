@@ -1,5 +1,10 @@
 import argparse
+import gnureadline as readline
 import json
+
+# Disable history and autocompletion, but keep basic editing (arrows, copy/paste)
+readline.set_history_length(0)  # Disable history
+readline.set_auto_history(False)  # Don't add to history
 import os
 import time
 from copy import deepcopy
@@ -350,6 +355,15 @@ def main():
 
 		if command == "quit":
 			return True, True
+
+		if command == "help":
+			print_info("Available commands:")
+			print_info(" /help                - show this help")
+			print_info(" /change-model <name> - change model for current chat/session")
+			print_info(" /list-chats          - list available chats")
+			print_info(" /switch-chat <name>  - switch to another chat")
+			print_info(" /quit                - exit the application")
+			return True, False
 
 		if command == "change-model":
 			if not args_list:
