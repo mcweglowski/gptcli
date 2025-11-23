@@ -6,10 +6,17 @@ UI widgets for GPT CLI application.
 from textual.containers import Container, ScrollableContainer, Vertical
 from textual.widgets import Static, TextArea, ListView, ListItem, Label, Markdown
 from textual.app import ComposeResult
+from textual.message import Message
 from rich.text import Text
 
 import gptcli
 from .utils import format_chat_entry
+
+
+class ScrollToBottom(Message):
+	"""Message to scroll conversation to bottom."""
+	def __init__(self):
+		super().__init__()
 
 
 class ChatListItem(ListItem):
@@ -201,6 +208,22 @@ class ConversationPanel(ScrollableContainer):
 		self.conversation_container = Vertical(id="conversation-container")
 		yield self.conversation_container
 	
+	def on_scroll_to_bottom(self, event: ScrollToBottom) -> None:
+		"""Handle scroll to bottom message."""
+		# Use multiple attempts to ensure scrolling works
+		def scroll_to_bottom():
+			try:
+				self.scroll_end(animate=False)
+			except:
+				pass
+		
+		# Try after refresh
+		self.call_after_refresh(scroll_to_bottom)
+		# Also try with timers as backup
+		self.set_timer(0.1, scroll_to_bottom)
+		self.set_timer(0.3, scroll_to_bottom)
+		self.set_timer(0.5, scroll_to_bottom)
+	
 	def load_conversation(self, chat_name):
 		"""Load and display conversation for selected chat."""
 		self.current_chat_name = chat_name
@@ -216,14 +239,9 @@ class ConversationPanel(ScrollableContainer):
 			self.conversation_container.mount(Static("No messages in this conversation yet.", classes="empty-message"))
 			return
 		
-		# Debug: print how many messages we're loading
-		print(f"DEBUG: Loading {len(messages)} messages for chat {chat_name}")
-		
 		# Render all messages from oldest to newest
 		# Messages are already in chronological order in the file
-		message_count = 0
 		for message in messages:
-			message_count += 1
 			role = message.get("role", "user")
 			content = message.get("content", "")
 			
@@ -245,18 +263,9 @@ class ConversationPanel(ScrollableContainer):
 				assistant_widget = Markdown(full_content, classes="message assistant-message")
 				self.conversation_container.mount(assistant_widget)
 		
-		# Auto-scroll to bottom (newest message)
-		# Use multiple approaches to ensure scrolling works
-		def scroll_to_bottom():
-			try:
-				self.scroll_end(animate=False)
-			except:
-				pass
-		
-		# Try immediately
-		self.call_after_refresh(scroll_to_bottom)
-		# Also try with timer as backup
-		self.set_timer(0.2, scroll_to_bottom)
+		# Post message to scroll to bottom after all widgets are mounted
+		# This ensures scrolling happens after layout is complete
+		self.post_message(ScrollToBottom())
 
 
 class MessageInput(TextArea):
