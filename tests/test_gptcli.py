@@ -91,6 +91,15 @@ openai_module.OpenAI = DummyOpenAI
 openai_module.APIError = DummyAPIError
 sys.modules["openai"] = openai_module
 
+# Stub gnureadline to avoid requiring it during tests
+gnureadline_module = types.ModuleType("gnureadline")
+def dummy_set_history_length(*args, **kwargs):
+    pass
+def dummy_set_auto_history(*args, **kwargs):
+    pass
+gnureadline_module.set_history_length = dummy_set_history_length
+gnureadline_module.set_auto_history = dummy_set_auto_history
+sys.modules["gnureadline"] = gnureadline_module
 
 # Ensure dummy API key so gptcli import succeeds without real credentials
 os.environ.setdefault("OPENAI_API_KEY", "test-key")

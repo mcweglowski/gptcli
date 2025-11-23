@@ -30,6 +30,12 @@ DEFAULT_CONFIG = {
 	"default_model": "gpt-5.1",
 	"pricing": {
 		"gpt-5.1": {"input": 2.50, "output": 10.00}
+	},
+	"system_prompts": {
+		"default": "You are a helpful assistant.",
+		"python-expert": "You are an expert Python programmer. Provide technical, concise answers with code examples.",
+		"friendly-mentor": "You are a friendly mentor. Use simple language, give practical advice, and be encouraging.",
+		"data-analyst": "You are a data analysis assistant. Always format responses as structured reports with sections."
 	}
 }
 
@@ -60,12 +66,15 @@ def load_config():
 			config["pricing"].update(data["pricing"])
 		if isinstance(data.get("default_model"), str):
 			config["default_model"] = data["default_model"]
+		if isinstance(data.get("system_prompts"), dict):
+			config["system_prompts"].update(data["system_prompts"])
 	return config
 
 
 CONFIG = load_config()
 DEFAULT_MODEL = CONFIG.get("default_model", DEFAULT_CONFIG["default_model"])
 MODEL_PRICING = CONFIG.get("pricing", DEFAULT_CONFIG["pricing"])
+SYSTEM_PROMPTS = CONFIG.get("system_prompts", DEFAULT_CONFIG["system_prompts"])
 
 
 def calculate_cost(model, input_tokens, output_tokens):
@@ -302,6 +311,15 @@ def main():
 	elif chat_config.get("model"):
 		current_model = chat_config["model"]
 	
+	current_system_prompt = None
+	if chat_config.get("system_prompt"):
+		prompt_name = chat_config["system_prompt"]
+		if prompt_name in SYSTEM_PROMPTS:
+			current_system_prompt = SYSTEM_PROMPTS[prompt_name]
+		else:
+			# If prompt name not found, use it as direct text
+			current_system_prompt = prompt_name
+	
 	def announce_chat():
 		if chat_name:
 			info = f"{INFO_COLOR}Chat: {chat_name}"
@@ -313,12 +331,15 @@ def main():
 		else:
 			print(f"{INFO_COLOR}Console GPT chat (temporary conversation - not saved). Type 'quit' to finish.{RESET_COLOR}")
 		print(f"{ASSISTANT_COLOR}Using model: {current_model}{RESET_COLOR}")
+		if current_system_prompt:
+			prompt_display = current_system_prompt[:50] + "..." if len(current_system_prompt) > 50 else current_system_prompt
+			print(f"{ASSISTANT_COLOR}System prompt: {prompt_display}{RESET_COLOR}")
 
 	def print_info(message):
 		print(f"{INFO_COLOR}{message}{RESET_COLOR}")
 
 	def load_chat(new_chat_name):
-		nonlocal chat_name, chat_config, messages, current_model
+		nonlocal chat_name, chat_config, messages, current_model, current_system_prompt
 		chat_name = new_chat_name
 		messages.clear()
 		chat_config = {}
@@ -329,8 +350,17 @@ def main():
 				current_model = chat_config["model"]
 			else:
 				current_model = DEFAULT_MODEL
+			
+			current_system_prompt = None
+			if chat_config.get("system_prompt"):
+				prompt_name = chat_config["system_prompt"]
+				if prompt_name in SYSTEM_PROMPTS:
+					current_system_prompt = SYSTEM_PROMPTS[prompt_name]
+				else:
+					current_system_prompt = prompt_name
 		else:
 			current_model = DEFAULT_MODEL
+			current_system_prompt = None
 		announce_chat()
 
 	if chat_name:
@@ -344,7 +374,7 @@ def main():
 		announce_chat()
 
 	def handle_command(command_line):
-		nonlocal current_model
+		nonlocal current_model, current_system_prompt
 		stripped = command_line[1:].strip()
 		if not stripped:
 			print_info("Empty command.")
@@ -360,6 +390,8 @@ def main():
 			print_info("Available commands:")
 			print_info(" /help                - show this help")
 			print_info(" /change-model <name> - change model for current chat/session")
+			print_info(" /system-prompt <name> - set system prompt for current chat")
+			print_info(" /system-prompt-list  - list available system prompts")
 			print_info(" /list-chats          - list available chats")
 			print_info(" /switch-chat <name>  - switch to another chat")
 			print_info(" /quit                - exit the application")
@@ -397,6 +429,38 @@ def main():
 			load_chat(target)
 			return True, False
 
+		if command == "system-prompt":
+			if not args_list:
+				print_info("Usage: /system-prompt <prompt_name>")
+				print_info("Use /system-prompt-list to see available prompts")
+				return True, False
+			prompt_name = args_list[0]
+			if prompt_name in SYSTEM_PROMPTS:
+				current_system_prompt = SYSTEM_PROMPTS[prompt_name]
+				if chat_name:
+					chat_config["system_prompt"] = prompt_name
+					save_chat_config(chat_name, chat_config)
+					print_info(f"System prompt for chat '{chat_name}' set to '{prompt_name}'.")
+				else:
+					print_info(f"Using system prompt '{prompt_name}' for temporary conversation.")
+			else:
+				# Allow direct text as system prompt
+				current_system_prompt = " ".join(args_list)
+				if chat_name:
+					chat_config["system_prompt"] = current_system_prompt
+					save_chat_config(chat_name, chat_config)
+					print_info(f"System prompt for chat '{chat_name}' set to custom text.")
+				else:
+					print_info(f"Using custom system prompt for temporary conversation.")
+			return True, False
+
+		if command == "system-prompt-list":
+			print_info("Available system prompts:")
+			for name, prompt in SYSTEM_PROMPTS.items():
+				preview = prompt[:60] + "..." if len(prompt) > 60 else prompt
+				print_info(f"  {name:<20} - {preview}")
+			return True, False
+
 		print_info(f"Unknown command: /{command}")
 		return True, False
 	
@@ -417,6 +481,15 @@ def main():
 
 		# Use only last 10 messages for API to avoid token limits
 		api_messages = messages[-10:] if len(messages) > 10 else messages
+		
+		# Add system prompt if set (only if not already in messages)
+		if current_system_prompt:
+			# Check if first message is already a system prompt
+			if not api_messages or api_messages[0].get("role") != "system":
+				api_messages = [{"role": "system", "content": current_system_prompt}] + api_messages
+			else:
+				# Update existing system prompt
+				api_messages[0]["content"] = current_system_prompt
 
 		# Try streaming first, fallback to regular if not supported
 		full_response = ""
