@@ -49,10 +49,23 @@ Screen {
 	background: $panel;
 }
 
-#message-input {
+#input-panel > Vertical {
 	width: 100%;
 	height: 100%;
+}
+
+#message-input {
+	width: 100%;
+	height: 1fr;
 	margin: 1;
+}
+
+#status-spinner {
+	width: 100%;
+	height: 1;
+	text-align: right;
+	margin-right: 1;
+	content-align: right middle;
 }
 
 #conversation-container {
