@@ -245,14 +245,18 @@ class ConversationPanel(ScrollableContainer):
 				assistant_widget = Markdown(full_content, classes="message assistant-message")
 				self.conversation_container.mount(assistant_widget)
 		
-		# Debug: print how many widgets were mounted
-		print(f"DEBUG: Mounted {message_count} messages, container has {len(self.conversation_container.children)} children")
-		
 		# Auto-scroll to bottom (newest message)
-		# Force refresh and scroll after widgets are mounted
-		self.refresh()
-		# Use call_after_refresh to ensure scrolling happens after layout
-		self.call_after_refresh(lambda: self.scroll_end(animate=False))
+		# Use multiple approaches to ensure scrolling works
+		def scroll_to_bottom():
+			try:
+				self.scroll_end(animate=False)
+			except:
+				pass
+		
+		# Try immediately
+		self.call_after_refresh(scroll_to_bottom)
+		# Also try with timer as backup
+		self.set_timer(0.2, scroll_to_bottom)
 
 
 class MessageInput(TextArea):

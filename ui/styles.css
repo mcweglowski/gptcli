@@ -58,7 +58,6 @@ Screen {
 #conversation-container {
 	width: 100%;
 	height: auto;
-	min-height: 100%;
 	padding: 1;
 }
 

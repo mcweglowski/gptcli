@@ -81,7 +81,8 @@ class GptCliApp(App):
 		conversation_panel.load_conversation(chat_name)
 		loading_widget = Static("[yellow]Thinking...[/yellow]", classes="loading-message")
 		conversation_panel.conversation_container.mount(loading_widget)
-		conversation_panel.scroll_end(animate=False)
+		# Scroll to bottom after a brief delay to ensure widgets are rendered
+		conversation_panel.set_timer(0.1, lambda: conversation_panel.scroll_end(animate=False))
 		
 		# Get chat config
 		config = gptcli.load_chat_config(chat_name)
@@ -156,6 +157,16 @@ class GptCliApp(App):
 			
 			# Update UI directly - remove loading indicator and reload conversation
 			conversation_panel.load_conversation(chat_name)
+			# Scroll to bottom - use multiple attempts to ensure it works
+			# load_conversation already has scroll_end, but add extra attempts
+			def force_scroll():
+				try:
+					conversation_panel.scroll_end(animate=False)
+				except:
+					pass
+			conversation_panel.call_after_refresh(force_scroll)
+			conversation_panel.set_timer(0.2, force_scroll)
+			conversation_panel.set_timer(0.5, force_scroll)  # Extra backup
 			
 			# Update details panel (don't refresh chat list to preserve selection)
 			chat_list_panel = self.query_one("#chat-list-panel", ChatListPanel)
