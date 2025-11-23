@@ -92,6 +92,17 @@ class ChatListPanel(Container):
 		return None
 
 
+class ChatDetailsPanel(Container):
+	"""Panel showing chat details and statistics."""
+	
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.border_title = "Chat Details & Stats"
+	
+	def compose(self) -> ComposeResult:
+		yield Static("Chat details and statistics will be displayed here", classes="chat-details-content")
+
+
 class ConversationPanel(Static):
 	"""Top right panel showing conversation history."""
 	
@@ -122,8 +133,18 @@ class GptCliApp(App):
 			background: $surface;
 		}
 		
-		#chat-list-panel {
+		#left-panel {
 			width: 25%;
+		}
+		
+		#chat-list-panel {
+			height: 50%;
+			border: solid $primary;
+			background: $panel;
+		}
+		
+		#chat-details-panel {
+			height: 50%;
 			border: solid $primary;
 			background: $panel;
 		}
@@ -135,6 +156,12 @@ class GptCliApp(App):
 		
 		#chat-list:focus {
 			border: solid $accent;
+		}
+		
+		.chat-details-content {
+			width: 100%;
+			height: 100%;
+			padding: 1;
 		}
 		
 		#right-panel {
@@ -176,7 +203,9 @@ class GptCliApp(App):
 	def compose(self) -> ComposeResult:
 		"""Create child widgets for the app."""
 		with Horizontal():
-			yield ChatListPanel(id="chat-list-panel")
+			with Vertical(id="left-panel"):
+				yield ChatListPanel(id="chat-list-panel")
+				yield ChatDetailsPanel(id="chat-details-panel")
 			with Vertical(id="right-panel"):
 				yield ConversationPanel(id="conversation-panel")
 				yield InputPanel(id="input-panel")
