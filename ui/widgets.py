@@ -1,51 +1,15 @@
 #!/usr/bin/env python3
 """
-Textual-based UI for GPT CLI chat application.
+UI widgets for GPT CLI application.
 """
 
-import os
-import json
-from textual.app import App, ComposeResult
-from textual.containers import Container, Horizontal, Vertical, ScrollableContainer
-from textual.widgets import Static, Input, ListView, ListItem, Label, Markdown
-from textual.message import Message
-from textual.binding import Binding
+from textual.containers import Container, ScrollableContainer
+from textual.widgets import Static, TextArea, ListView, ListItem, Label, Markdown
+from textual.app import ComposeResult
+from rich.text import Text
 
-# Import functions from gptcli
 import gptcli
-
-
-def get_available_chats():
-	"""Get list of available chats with metadata."""
-	if not os.path.exists(gptcli.CONVERSATIONS_DIR):
-		return []
-	chats = []
-	for entry in os.listdir(gptcli.CONVERSATIONS_DIR):
-		full_path = os.path.join(gptcli.CONVERSATIONS_DIR, entry)
-		if os.path.isdir(full_path):
-			continue
-		if entry.endswith(".config.json"):
-			continue
-		if entry.endswith(".json"):
-			chats.append(entry[:-5])
-	metadata = []
-	for chat in chats:
-		config = gptcli.load_chat_config(chat)
-		model = config.get("model", gptcli.DEFAULT_MODEL)
-		conversation = gptcli.load_conversation(chat)
-		metadata.append({
-			"name": chat,
-			"model": model,
-			"message_count": len(conversation)
-		})
-	return sorted(metadata, key=lambda item: item["name"])
-
-
-def format_chat_entry(chat):
-	"""Format chat entry for display in list."""
-	name = chat["name"] if len(chat["name"]) <= 24 else chat["name"][:21] + "..."
-	model = chat["model"]
-	return f"{name:<24} | {model:<16} | {chat['message_count']:>5} msgs"
+from .utils import format_chat_entry
 
 
 class ChatListItem(ListItem):
@@ -94,12 +58,40 @@ class ChatListPanel(Container):
 				else:
 					conversation_panel.load_conversation(None)
 	
-	def load_chats(self) -> None:
+	def load_chats(self, preserve_selection: bool = True) -> None:
 		"""Load and display available chats."""
+		# Remember currently selected chat
+		selected_chat_name = None
+		if preserve_selection:
+			chat_data = self.get_selected_chat()
+			if chat_data:
+				selected_chat_name = chat_data["name"]
+		
+		from .utils import get_available_chats
 		chats = get_available_chats()
 		self.chat_list_view.clear()
 		for chat in chats:
 			self.chat_list_view.append(ChatListItem(chat))
+		
+		# Restore selection if it still exists
+		if selected_chat_name and preserve_selection:
+			# Find the chat in the list and select it
+			self._restore_selection(selected_chat_name)
+	
+	def _restore_selection(self, chat_name: str) -> None:
+		"""Restore selection after loading chats."""
+		for i, item in enumerate(self.chat_list_view.children):
+			if isinstance(item, ChatListItem) and item.chat_data["name"] == chat_name:
+				# Set the index to restore selection
+				self.chat_list_view.index = i
+				# Update details panel
+				self.update_details_on_selection()
+				# Also update conversation panel
+				app = self.app
+				if app:
+					conversation_panel = app.query_one("#conversation-panel", ConversationPanel)
+					conversation_panel.load_conversation(chat_name)
+				break
 	
 	def get_selected_chat(self):
 		"""Get currently selected chat data."""
@@ -231,7 +223,6 @@ class ConversationPanel(ScrollableContainer):
 			
 			if role == "user":
 				# User message
-				from rich.text import Text
 				user_header = Text("You:", style="bold cyan")
 				user_content = Text(f"\n{content}")
 				user_text = Text.assemble(user_header, user_content)
@@ -252,149 +243,73 @@ class ConversationPanel(ScrollableContainer):
 		self.scroll_end(animate=False)
 
 
+class MessageInput(TextArea):
+	"""Custom TextArea for message input with Enter to send."""
+	
+	def on_key(self, event) -> None:
+		"""Handle key presses - Enter sends, Shift+Enter adds new line."""
+		if event.key == "enter":
+			# Check if Shift is pressed by examining the key name
+			# In Textual, Shift+Enter might be represented differently
+			# For now, we'll always send on Enter and let user use Shift+Enter for newlines
+			# (TextArea should handle Shift+Enter automatically)
+			
+			# Regular Enter - send message
+			message = self.text.strip()
+			if message:
+				# Get current chat BEFORE clearing input
+				app = self.app
+				if not app:
+					return
+				
+				chat_list_panel = app.query_one("#chat-list-panel", ChatListPanel)
+				chat_data = chat_list_panel.get_selected_chat()
+				
+				if not chat_data:
+					# No chat selected - show some feedback?
+					event.prevent_default()
+					event.stop()
+					return
+				
+				chat_name = chat_data["name"]
+				
+				# Clear input
+				self.text = ""
+				
+				# Send message asynchronously
+				# @work decorator handles async execution
+				try:
+					app.send_message_to_api(chat_name, message)
+				except Exception as e:
+					# Show error if function call fails
+					conversation_panel = app.query_one("#conversation-panel", ConversationPanel)
+					error_text = Text(f"Error calling API: {str(e)}", style="red")
+					error_widget = Static(error_text, classes="error-message")
+					conversation_panel.conversation_container.mount(error_widget)
+				event.prevent_default()
+				event.stop()
+			else:
+				# Empty message - prevent default to avoid newline
+				event.prevent_default()
+				event.stop()
+			# If Shift+Enter, allow default behavior (newline)
+
+
 class InputPanel(Container):
 	"""Bottom right panel for user input."""
 	
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.border_title = "Input"
+		self.message_input = None
 	
 	def compose(self) -> ComposeResult:
-		yield Input(placeholder="Type your message here...", id="message-input")
-
-
-class GptCliApp(App):
-	"""Main Textual application for GPT CLI."""
-	
-	CSS = """
-		Screen {
-			background: $surface;
-		}
-		
-		#left-panel {
-			width: 25%;
-		}
-		
-		#chat-list-panel {
-			height: 50%;
-			border: solid $primary;
-			background: $panel;
-		}
-		
-		#chat-details-panel {
-			height: 50%;
-			border: solid $primary;
-			background: $panel;
-		}
-		
-		#chat-list {
-			width: 100%;
-			height: 100%;
-		}
-		
-		#chat-list:focus {
-			border: solid $accent;
-		}
-		
-		.chat-details-content {
-			width: 100%;
-			height: 100%;
-			padding: 1;
-		}
-		
-		#right-panel {
-			width: 75%;
-		}
-		
-		#conversation-panel {
-			height: 75%;
-			border: solid $primary;
-			background: $surface;
-		}
-		
-		#input-panel {
-			height: 25%;
-			border: solid $primary;
-			background: $panel;
-		}
-		
-		#message-input {
-			width: 100%;
-			margin: 1;
-		}
-		
-		#conversation-container {
-			width: 100%;
-			padding: 1;
-		}
-		
-		.message {
-			margin: 1 0;
-			padding: 1;
-		}
-		
-		.user-message {
-			background: $panel;
-			border-left: solid $primary;
-		}
-		
-		.assistant-message {
-			background: $surface;
-			border-left: solid $success;
-			width: 100%;
-		}
-		
-		.empty-message {
-			padding: 2;
-			text-align: center;
-			color: $text-muted;
-		}
-	"""
-	
-	BINDINGS = [
-		("q", "quit", "Quit"),
-		("ctrl+c", "quit", "Quit"),
-		("escape", "quit", "Quit"),
-		("r", "refresh_chats", "Refresh chats"),
-	]
-	
-	def compose(self) -> ComposeResult:
-		"""Create child widgets for the app."""
-		with Horizontal():
-			with Vertical(id="left-panel"):
-				yield ChatListPanel(id="chat-list-panel")
-				yield ChatDetailsPanel(id="chat-details-panel")
-			with Vertical(id="right-panel"):
-				yield ConversationPanel(id="conversation-panel")
-				yield InputPanel(id="input-panel")
-	
-	def action_quit(self) -> None:
-		"""Quit the application."""
-		self.exit()
-	
-	def action_refresh_chats(self) -> None:
-		"""Refresh the chat list."""
-		chat_list_panel = self.query_one("#chat-list-panel", ChatListPanel)
-		chat_list_panel.load_chats()
-	
-	def on_mount(self) -> None:
-		"""Focus on chat list when app starts."""
-		chat_list = self.query_one("#chat-list")
-		chat_list.focus()
-		# Update details panel if a chat is selected
-		chat_list_panel = self.query_one("#chat-list-panel", ChatListPanel)
-		details_panel = self.query_one("#chat-details-panel", ChatDetailsPanel)
-		chat_data = chat_list_panel.get_selected_chat()
-		if chat_data:
-			details_panel.update_chat_details(chat_data)
-
-
-def main():
-	"""Main entry point for the UI application."""
-	app = GptCliApp()
-	app.run()
-
-
-if __name__ == "__main__":
-	main()
+		# Use custom TextArea for multi-line input with word wrap
+		self.message_input = MessageInput(
+			text="",
+			id="message-input",
+			show_line_numbers=False,
+			soft_wrap=True
+		)
+		yield self.message_input
 
