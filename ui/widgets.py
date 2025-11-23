@@ -3,7 +3,7 @@
 UI widgets for GPT CLI application.
 """
 
-from textual.containers import Container, ScrollableContainer
+from textual.containers import Container, ScrollableContainer, Vertical
 from textual.widgets import Static, TextArea, ListView, ListItem, Label, Markdown
 from textual.app import ComposeResult
 from rich.text import Text
@@ -198,7 +198,7 @@ class ConversationPanel(ScrollableContainer):
 		self.conversation_container = None
 	
 	def compose(self) -> ComposeResult:
-		self.conversation_container = Container(id="conversation-container")
+		self.conversation_container = Vertical(id="conversation-container")
 		yield self.conversation_container
 	
 	def load_conversation(self, chat_name):
@@ -216,8 +216,14 @@ class ConversationPanel(ScrollableContainer):
 			self.conversation_container.mount(Static("No messages in this conversation yet.", classes="empty-message"))
 			return
 		
-		# Render messages
+		# Debug: print how many messages we're loading
+		print(f"DEBUG: Loading {len(messages)} messages for chat {chat_name}")
+		
+		# Render all messages from oldest to newest
+		# Messages are already in chronological order in the file
+		message_count = 0
 		for message in messages:
+			message_count += 1
 			role = message.get("role", "user")
 			content = message.get("content", "")
 			
@@ -239,8 +245,14 @@ class ConversationPanel(ScrollableContainer):
 				assistant_widget = Markdown(full_content, classes="message assistant-message")
 				self.conversation_container.mount(assistant_widget)
 		
-		# Auto-scroll to bottom
-		self.scroll_end(animate=False)
+		# Debug: print how many widgets were mounted
+		print(f"DEBUG: Mounted {message_count} messages, container has {len(self.conversation_container.children)} children")
+		
+		# Auto-scroll to bottom (newest message)
+		# Force refresh and scroll after widgets are mounted
+		self.refresh()
+		# Use call_after_refresh to ensure scrolling happens after layout
+		self.call_after_refresh(lambda: self.scroll_end(animate=False))
 
 
 class MessageInput(TextArea):
