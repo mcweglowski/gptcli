@@ -6,8 +6,8 @@ Textual-based UI for GPT CLI chat application.
 import os
 import json
 from textual.app import App, ComposeResult
-from textual.containers import Container, Horizontal, Vertical
-from textual.widgets import Static, Input, ListView, ListItem, Label
+from textual.containers import Container, Horizontal, Vertical, ScrollableContainer
+from textual.widgets import Static, Input, ListView, ListItem, Label, Markdown
 from textual.message import Message
 from textual.binding import Binding
 
@@ -79,11 +79,20 @@ class ChatListPanel(Container):
 		self.set_interval(0.1, self._check_selection_change)
 	
 	def _check_selection_change(self) -> None:
-		"""Check if selection changed and update details."""
+		"""Check if selection changed and update details and conversation."""
 		current = self.chat_list_view.highlighted_child
 		if current != self._last_highlighted:
 			self._last_highlighted = current
 			self.update_details_on_selection()
+			# Also update conversation panel
+			app = self.app
+			if app:
+				conversation_panel = app.query_one("#conversation-panel", ConversationPanel)
+				chat_data = self.get_selected_chat()
+				if chat_data:
+					conversation_panel.load_conversation(chat_data["name"])
+				else:
+					conversation_panel.load_conversation(None)
 	
 	def load_chats(self) -> None:
 		"""Load and display available chats."""
@@ -108,6 +117,15 @@ class ChatListPanel(Container):
 			details_panel = app.query_one("#chat-details-panel", ChatDetailsPanel)
 			chat_data = self.get_selected_chat()
 			details_panel.update_chat_details(chat_data)
+	
+	def on_list_view_selected(self, event) -> None:
+		"""Handle chat selection (Enter key)."""
+		chat_data = self.get_selected_chat()
+		if chat_data:
+			app = self.app
+			if app:
+				conversation_panel = app.query_one("#conversation-panel", ConversationPanel)
+				conversation_panel.load_conversation(chat_data["name"])
 	
 	def on_list_view_highlighted(self, event) -> None:
 		"""Handle chat selection change."""
@@ -178,15 +196,60 @@ class ChatDetailsPanel(Container):
 		self.details_content.update("\n".join(details))
 
 
-class ConversationPanel(Static):
+class ConversationPanel(ScrollableContainer):
 	"""Top right panel showing conversation history."""
 	
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.border_title = "Conversation"
+		self.current_chat_name = None
+		self.conversation_container = None
 	
 	def compose(self) -> ComposeResult:
-		yield Static("Conversation history will go here", classes="conversation-content")
+		self.conversation_container = Container(id="conversation-container")
+		yield self.conversation_container
+	
+	def load_conversation(self, chat_name):
+		"""Load and display conversation for selected chat."""
+		self.current_chat_name = chat_name
+		self.conversation_container.remove_children()
+		
+		if not chat_name:
+			self.conversation_container.mount(Static("Select a chat to view conversation", classes="empty-message"))
+			return
+		
+		messages = gptcli.load_conversation(chat_name)
+		
+		if not messages:
+			self.conversation_container.mount(Static("No messages in this conversation yet.", classes="empty-message"))
+			return
+		
+		# Render messages
+		for message in messages:
+			role = message.get("role", "user")
+			content = message.get("content", "")
+			
+			if role == "user":
+				# User message
+				from rich.text import Text
+				user_header = Text("You:", style="bold cyan")
+				user_content = Text(f"\n{content}")
+				user_text = Text.assemble(user_header, user_content)
+				user_widget = Static(user_text, classes="message user-message")
+				self.conversation_container.mount(user_widget)
+			elif role == "assistant":
+				# Assistant message with markdown
+				config = gptcli.load_chat_config(chat_name)
+				model = config.get("model", gptcli.DEFAULT_MODEL)
+				# Combine header and content in markdown format
+				header = f"**GPT({chat_name}|{model}):**\n\n"
+				full_content = header + content
+				# Use Markdown widget for the entire message
+				assistant_widget = Markdown(full_content, classes="message assistant-message")
+				self.conversation_container.mount(assistant_widget)
+		
+		# Auto-scroll to bottom
+		self.scroll_end(animate=False)
 
 
 class InputPanel(Container):
@@ -240,7 +303,7 @@ class GptCliApp(App):
 		}
 		
 		#right-panel {
-			width: 1fr;
+			width: 75%;
 		}
 		
 		#conversation-panel {
@@ -260,11 +323,31 @@ class GptCliApp(App):
 			margin: 1;
 		}
 		
-		.chat-list-content,
-		.conversation-content {
+		#conversation-container {
 			width: 100%;
-			height: 100%;
 			padding: 1;
+		}
+		
+		.message {
+			margin: 1 0;
+			padding: 1;
+		}
+		
+		.user-message {
+			background: $panel;
+			border-left: solid $primary;
+		}
+		
+		.assistant-message {
+			background: $surface;
+			border-left: solid $success;
+			width: 100%;
+		}
+		
+		.empty-message {
+			padding: 2;
+			text-align: center;
+			color: $text-muted;
 		}
 	"""
 	
