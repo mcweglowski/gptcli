@@ -487,12 +487,19 @@ class NewChatModal(ModalScreen):
 				)
 				yield self.name_input
 				with Horizontal(classes="modal-buttons"):
-					yield Button("OK", id="modal-ok", variant="primary")
-					yield Button("Cancel", id="modal-cancel")
+					self.yes_button = Button("Yes", id="modal-ok", variant="primary")
+					yield self.yes_button
+					self.no_button = Button("No", id="modal-cancel")
+					yield self.no_button
 	
 	def on_mount(self) -> None:
 		"""Focus input when modal opens."""
 		self.name_input.focus()
+		# Ensure buttons have visible text
+		if hasattr(self, 'yes_button'):
+			self.yes_button.label = "Yes"
+		if hasattr(self, 'no_button'):
+			self.no_button.label = "No"
 	
 	def on_button_pressed(self, event) -> None:
 		"""Handle button presses."""
@@ -540,8 +547,17 @@ class DeleteChatModal(ModalScreen):
 					classes="modal-title"
 				)
 				with Horizontal(classes="modal-buttons"):
-					yield Button("Yes", id="modal-yes", variant="primary")
-					yield Button("No", id="modal-no")
+					self.yes_button = Button("Yes", id="modal-yes", variant="primary")
+					yield self.yes_button
+					self.no_button = Button("No", id="modal-no")
+					yield self.no_button
+	
+	def on_mount(self) -> None:
+		"""Ensure buttons have visible text."""
+		if hasattr(self, 'yes_button'):
+			self.yes_button.label = "Yes"
+		if hasattr(self, 'no_button'):
+			self.no_button.label = "No"
 	
 	def on_button_pressed(self, event) -> None:
 		"""Handle button presses."""

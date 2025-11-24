@@ -127,7 +127,31 @@ Screen {
 
 .modal-buttons {
 	width: 100%;
-	height: 1;
+	height: auto;
 	align: center middle;
+	margin-top: 1;
+}
+
+.modal-buttons Button {
+	width: auto;
+	height: 3;
+	min-height: 3;
+	margin: 0 1;
+	min-width: 8;
+	color: $text;
+	background: $panel;
+	border: solid $primary;
+	text-align: center;
+	content-align: center middle;
+}
+
+.modal-buttons Button:focus {
+	border: solid $accent;
+	background: $accent;
+}
+
+.modal-buttons Button.--primary {
+	background: $accent;
+	border: solid $accent;
 }
 
