@@ -3,11 +3,15 @@
 UI widgets for GPT CLI application.
 """
 
-from textual.containers import Container, ScrollableContainer, Vertical
-from textual.widgets import Static, TextArea, ListView, ListItem, Label, Markdown
+from textual.containers import Container, ScrollableContainer, Vertical, Horizontal, Center
+from textual.widgets import Static, TextArea, ListView, ListItem, Label, Markdown, Input, Button
 from textual.app import ComposeResult
+from textual.binding import Binding
 from textual.message import Message
+from textual.screen import ModalScreen
 from rich.text import Text
+from typing import Optional
+import os
 
 import gptcli
 from .utils import format_chat_entry
@@ -21,6 +25,7 @@ class ScrollToBottom(Message):
 
 class ChatListItem(ListItem):
 	"""List item for a chat."""
+
 	
 	def __init__(self, chat_data, *args, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -32,6 +37,11 @@ class ChatListItem(ListItem):
 
 class ChatListPanel(Container):
 	"""Left panel showing list of available chats."""
+	
+	BINDINGS = [
+		Binding("n", "new_chat", "New chat"),
+		Binding("d", "delete_chat", "Delete chat"),
+	]
 	
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
@@ -134,6 +144,89 @@ class ChatListPanel(Container):
 			details_panel = app.query_one("#chat-details-panel", ChatDetailsPanel)
 			chat_data = self.get_selected_chat()
 			details_panel.update_chat_details(chat_data)
+			
+	def action_new_chat(self) -> None:
+		app = self.app
+		if not app:
+			return
+		
+		def handle_result(chat_name: Optional[str]) -> None:
+			"""Handle result from modal - create new chat and set it as active."""
+			if not chat_name or not chat_name.strip():
+				return  # User cancelled or entered empty name
+			
+			chat_name = chat_name.strip()
+			
+			# Check if chat already exists
+			chat_path = gptcli.get_conversation_path(chat_name)
+			if os.path.exists(chat_path):
+				# Chat already exists - could show error, but for now just select it
+				app.bell()
+				self.load_chats()
+				self._restore_selection(chat_name)
+				return
+			
+			# Create new chat file (empty conversation)
+			gptcli.save_conversation(chat_name, [])
+			
+			# Reload chats and select the new one
+			self.load_chats(preserve_selection=False)
+			self._restore_selection(chat_name)
+			
+			# Focus on input panel for first message
+			# Use call_after_refresh to ensure UI is updated
+			def focus_input():
+				input_panel = app.query_one("#input-panel", InputPanel)
+				if input_panel.message_input:
+					input_panel.message_input.focus()
+			
+			app.call_after_refresh(focus_input)
+		
+		app.push_screen(NewChatModal(), handle_result)
+	
+	def action_delete_chat(self) -> None:
+		"""Delete selected chat."""
+		chat_data = self.get_selected_chat()
+		if not chat_data:
+			app = self.app
+			if app:
+				app.bell()  # No chat selected
+			return
+		
+		chat_name = chat_data["name"]
+		app = self.app
+		if not app:
+			return
+		
+		def handle_result(confirmed: Optional[bool]) -> None:
+			"""Handle result from delete confirmation modal."""
+			if not confirmed:
+				return  # User cancelled
+			
+			# Delete chat files
+			chat_path = gptcli.get_conversation_path(chat_name)
+			config_path = gptcli.get_chat_config_path(chat_name)
+			stats_path = gptcli.get_stats_path(chat_name)
+			
+			if os.path.exists(chat_path):
+				os.remove(chat_path)
+			if os.path.exists(config_path):
+				os.remove(config_path)
+			if os.path.exists(stats_path):
+				os.remove(stats_path)
+			
+			# Reload chats
+			self.load_chats(preserve_selection=False)
+			
+			# Clear conversation panel
+			conversation_panel = app.query_one("#conversation-panel", ConversationPanel)
+			conversation_panel.load_conversation(None)
+			
+			# Clear details panel
+			details_panel = app.query_one("#chat-details-panel", ChatDetailsPanel)
+			details_panel.update_chat_details(None)
+		
+		app.push_screen(DeleteChatModal(chat_name), handle_result)
 
 
 class ChatDetailsPanel(Container):
@@ -375,4 +468,89 @@ class InputPanel(Container):
 			frame = self._spinner_frames[self._spinner_index]
 			# Use stored text
 			self.status_spinner.update(f"[yellow]{self._spinner_text} {frame}[/yellow]")
+
+class NewChatModal(ModalScreen):
+	"""Modal dialog for creating new chat."""
+	
+	BINDINGS = [
+		("escape", "cancel", "Cancel"),
+	]
+	
+	def compose(self) -> ComposeResult:
+		"""Create modal content."""
+		with Center():
+			with Vertical(id="modal-dialog", classes="modal-content"):
+				yield Label("Enter chat name:", id="modal-title", classes="modal-title")
+				self.name_input = Input(
+					placeholder="Chat name...",
+					id="chat-name-input"
+				)
+				yield self.name_input
+				with Horizontal(classes="modal-buttons"):
+					yield Button("OK", id="modal-ok", variant="primary")
+					yield Button("Cancel", id="modal-cancel")
+	
+	def on_mount(self) -> None:
+		"""Focus input when modal opens."""
+		self.name_input.focus()
+	
+	def on_button_pressed(self, event) -> None:
+		"""Handle button presses."""
+		if event.button.id == "modal-ok":
+			chat_name = self.name_input.value.strip()
+			if chat_name:
+				self.dismiss(chat_name)
+			else:
+				self.app.bell()
+		elif event.button.id == "modal-cancel":
+			self.dismiss(None)
+	
+	def on_input_submitted(self, event) -> None:
+		"""Handle Enter key in input."""
+		if event.input.id == "chat-name-input":
+			chat_name = event.input.value.strip()
+			if chat_name:
+				self.dismiss(chat_name)
+			else:
+				self.app.bell()
+	
+	def action_cancel(self) -> None:
+		"""Cancel modal."""
+		self.dismiss(None)
+
+
+class DeleteChatModal(ModalScreen):
+	"""Modal dialog for confirming chat deletion."""
+	
+	BINDINGS = [
+		("escape", "cancel", "Cancel"),
+	]
+	
+	def __init__(self, chat_name: str, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.chat_name = chat_name
+	
+	def compose(self) -> ComposeResult:
+		"""Create modal content."""
+		with Center():
+			with Vertical(id="modal-dialog", classes="modal-content"):
+				yield Label(
+					f'Czy chcesz usunąć "{self.chat_name}"?',
+					id="modal-title",
+					classes="modal-title"
+				)
+				with Horizontal(classes="modal-buttons"):
+					yield Button("Yes", id="modal-yes", variant="primary")
+					yield Button("No", id="modal-no")
+	
+	def on_button_pressed(self, event) -> None:
+		"""Handle button presses."""
+		if event.button.id == "modal-yes":
+			self.dismiss(True)
+		elif event.button.id == "modal-no":
+			self.dismiss(False)
+	
+	def action_cancel(self) -> None:
+		"""Cancel modal."""
+		self.dismiss(False)
 

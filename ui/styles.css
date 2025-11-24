@@ -20,7 +20,8 @@ Screen {
 
 #chat-list {
 	width: 100%;
-	height: 100%;
+	height: 1fr;
+    overflow-y: auto;
 }
 
 #chat-list:focus {
@@ -102,5 +103,31 @@ Screen {
 	padding: 1;
 	text-align: center;
 	color: $text-muted;
+}
+
+.modal-content {
+	width: 50;
+	height: auto;
+	background: $panel;
+	border: solid $primary;
+	padding: 2;
+}
+
+.modal-title {
+	width: 100%;
+	height: 1;
+	margin-bottom: 1;
+	text-align: center;
+}
+
+#chat-name-input {
+	width: 100%;
+	margin-bottom: 1;
+}
+
+.modal-buttons {
+	width: 100%;
+	height: 1;
+	align: center middle;
 }
 
