@@ -163,6 +163,14 @@ def save_chat_config(chat_name, config):
 		print(f"{RESET_COLOR}Warning: Could not save chat config to {file_path}")
 
 
+def update_chat_last_used(chat_name):
+	"""Update the last used timestamp for a chat."""
+	import time
+	config = load_chat_config(chat_name)
+	config["last_used"] = time.time()
+	save_chat_config(chat_name, config)
+
+
 def load_statistics(chat_name):
 	"""Loads statistics from file."""
 	file_path = get_stats_path(chat_name)

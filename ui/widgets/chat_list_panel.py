@@ -59,6 +59,8 @@ class ChatListPanel(Container):
 				conversation_panel = app.query_one("#conversation-panel", ConversationPanel)
 				chat_data = self.get_selected_chat()
 				if chat_data:
+					# Update last used timestamp when chat is selected
+					gptcli.update_chat_last_used(chat_data["name"])
 					conversation_panel.load_conversation(chat_data["name"])
 				else:
 					conversation_panel.load_conversation(None)

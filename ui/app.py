@@ -76,6 +76,9 @@ class GptCliApp(App):
 		# Load conversation
 		messages = gptcli.load_conversation(chat_name)
 		
+		# Update last used timestamp when sending a message
+		gptcli.update_chat_last_used(chat_name)
+		
 		# Add user message with timestamp (moment of sending)
 		timestamp = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
 		messages.append({"role": "user", "content": user_message, "timestamp": timestamp})

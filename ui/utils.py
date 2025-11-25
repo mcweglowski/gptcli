@@ -25,12 +25,23 @@ def get_available_chats():
 		config = gptcli.load_chat_config(chat)
 		model = config.get("model", gptcli.DEFAULT_MODEL)
 		conversation = gptcli.load_conversation(chat)
+		# Get last_used timestamp, fallback to file modification time if not set
+		last_used = config.get("last_used")
+		if last_used is None:
+			# Use file modification time as fallback
+			conv_path = gptcli.get_conversation_path(chat)
+			if os.path.exists(conv_path):
+				last_used = os.path.getmtime(conv_path)
+			else:
+				last_used = 0
 		metadata.append({
 			"name": chat,
 			"model": model,
-			"message_count": len(conversation)
+			"message_count": len(conversation),
+			"last_used": last_used
 		})
-	return sorted(metadata, key=lambda item: item["name"])
+	# Sort by last_used descending (most recently used first)
+	return sorted(metadata, key=lambda item: item["last_used"], reverse=True)
 
 
 def format_chat_entry(chat):
