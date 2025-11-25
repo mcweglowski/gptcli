@@ -112,8 +112,10 @@ class GptCliApp(App):
 			else:
 				current_system_prompt = None
 			
-			# Prepare API messages (last 10)
+			# Prepare API messages (last 10) - filter out 'model' field
 			api_messages = messages[-10:] if len(messages) > 10 else messages.copy()
+			# Remove 'model' field from messages before sending to API
+			api_messages = [{k: v for k, v in msg.items() if k != "model"} for msg in api_messages]
 			
 			# Add system prompt if set
 			if current_system_prompt:
@@ -145,8 +147,8 @@ class GptCliApp(App):
 				else:
 					assistant_message = str(response)
 				
-				# Add assistant message to conversation
-				messages.append({"role": "assistant", "content": assistant_message})
+				# Add assistant message to conversation with model info
+				messages.append({"role": "assistant", "content": assistant_message, "model": model})
 				gptcli.save_conversation(chat_name, messages)
 				
 				# Calculate statistics

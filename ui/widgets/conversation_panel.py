@@ -67,9 +67,12 @@ class ConversationPanel(ScrollableContainer):
 				user_widget = Static(user_text, classes="message user-message")
 				self.conversation_container.mount(user_widget)
 			elif role == "assistant":
-				config = gptcli.load_chat_config(chat_name)
-				model = config.get("model", gptcli.DEFAULT_MODEL)
-				header = f"**GPT({chat_name}|{model}):**\n\n"
+				# Get model from message if available, otherwise from config
+				model = message.get("model")
+				if not model:
+					config = gptcli.load_chat_config(chat_name)
+					model = config.get("model", gptcli.DEFAULT_MODEL)
+				header = f"**{model}:**\n\n"
 				full_content = header + content
 				assistant_widget = Markdown(full_content, classes="message assistant-message")
 				self.conversation_container.mount(assistant_widget)
