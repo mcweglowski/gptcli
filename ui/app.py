@@ -6,6 +6,7 @@ Main application for GPT CLI UI.
 import os
 import time
 import threading
+from datetime import datetime
 from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
@@ -75,8 +76,9 @@ class GptCliApp(App):
 		# Load conversation
 		messages = gptcli.load_conversation(chat_name)
 		
-		# Add user message
-		messages.append({"role": "user", "content": user_message})
+		# Add user message with timestamp (moment of sending)
+		timestamp = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+		messages.append({"role": "user", "content": user_message, "timestamp": timestamp})
 		
 		# Save conversation immediately
 		gptcli.save_conversation(chat_name, messages)
@@ -114,8 +116,8 @@ class GptCliApp(App):
 			
 			# Prepare API messages (last 10)
 			api_messages = messages[-10:] if len(messages) > 10 else messages.copy()
-			# Remove 'model' field from messages before sending to API
-			api_messages = [{k: v for k, v in msg.items() if k != "model"} for msg in api_messages]
+			# Remove 'model' and 'timestamp' fields from messages before sending to API
+			api_messages = [{k: v for k, v in msg.items() if k not in ("model", "timestamp")} for msg in api_messages]
 			
 			# Add system prompt if set
 			if current_system_prompt:
@@ -147,8 +149,9 @@ class GptCliApp(App):
 				else:
 					assistant_message = str(response)
 				
-				# Add assistant message to conversation with model info
-				messages.append({"role": "assistant", "content": assistant_message, "model": model})
+				# Add assistant message to conversation with model info and timestamp (moment of receiving response)
+				timestamp = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+				messages.append({"role": "assistant", "content": assistant_message, "model": model, "timestamp": timestamp})
 				gptcli.save_conversation(chat_name, messages)
 				
 				# Calculate statistics
