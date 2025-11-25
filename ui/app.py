@@ -76,9 +76,6 @@ class GptCliApp(App):
 		# Load conversation
 		messages = gptcli.load_conversation(chat_name)
 		
-		# Update last used timestamp when sending a message
-		gptcli.update_chat_last_used(chat_name)
-		
 		# Add user message with timestamp (moment of sending)
 		timestamp = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
 		messages.append({"role": "user", "content": user_message, "timestamp": timestamp})
@@ -194,6 +191,10 @@ class GptCliApp(App):
 	def _update_ui_after_response(self, chat_name: str) -> None:
 		"""Update UI after successful API response."""
 		conversation_panel = self.query_one("#conversation-panel", ConversationPanel)
+		
+		# Refresh chat list first to update sorting based on file modification time
+		chat_list_panel = self.query_one("#chat-list-panel", ChatListPanel)
+		chat_list_panel.load_chats(preserve_selection=True)
 		
 		# Update UI directly - remove loading indicator and reload conversation
 		conversation_panel.load_conversation(chat_name)
