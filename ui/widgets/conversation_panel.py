@@ -1,0 +1,77 @@
+from textual.app import ComposeResult
+from textual.containers import ScrollableContainer, Vertical
+from textual.message import Message
+from textual.widgets import Static, Markdown
+from rich.text import Text
+
+import gptcli
+
+
+class ScrollToBottom(Message):
+	"""Message to scroll conversation to bottom."""
+	
+	def __init__(self):
+		super().__init__()
+
+
+class ConversationPanel(ScrollableContainer):
+	"""Top right panel showing conversation history."""
+	
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.border_title = "Conversation"
+		self.current_chat_name = None
+		self.conversation_container = None
+	
+	def compose(self) -> ComposeResult:
+		self.conversation_container = Vertical(id="conversation-container")
+		yield self.conversation_container
+	
+	def on_scroll_to_bottom(self, event: ScrollToBottom) -> None:
+		"""Handle scroll to bottom message."""
+		def scroll_to_bottom():
+			try:
+				self.scroll_end(animate=False)
+			except Exception:
+				pass
+		
+		self.call_after_refresh(scroll_to_bottom)
+		self.set_timer(0.1, scroll_to_bottom)
+		self.set_timer(0.3, scroll_to_bottom)
+		self.set_timer(0.5, scroll_to_bottom)
+	
+	def load_conversation(self, chat_name):
+		"""Load and display conversation for selected chat."""
+		self.current_chat_name = chat_name
+		self.conversation_container.remove_children()
+		
+		if not chat_name:
+			self.conversation_container.mount(Static("Select a chat to view conversation", classes="empty-message"))
+			return
+		
+		messages = gptcli.load_conversation(chat_name)
+		
+		if not messages:
+			self.conversation_container.mount(Static("No messages in this conversation yet.", classes="empty-message"))
+			return
+		
+		for message in messages:
+			role = message.get("role", "user")
+			content = message.get("content", "")
+			
+			if role == "user":
+				user_header = Text("You:", style="bold cyan")
+				user_content = Text(f"\n{content}")
+				user_text = Text.assemble(user_header, user_content)
+				user_widget = Static(user_text, classes="message user-message")
+				self.conversation_container.mount(user_widget)
+			elif role == "assistant":
+				config = gptcli.load_chat_config(chat_name)
+				model = config.get("model", gptcli.DEFAULT_MODEL)
+				header = f"**GPT({chat_name}|{model}):**\n\n"
+				full_content = header + content
+				assistant_widget = Markdown(full_content, classes="message assistant-message")
+				self.conversation_container.mount(assistant_widget)
+		
+		self.post_message(ScrollToBottom())
+

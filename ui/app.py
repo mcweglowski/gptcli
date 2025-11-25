@@ -14,12 +14,10 @@ from openai import APIError
 from rich.text import Text
 
 import gptcli
-from .widgets import (
-	ChatListPanel,
-	ChatDetailsPanel,
-	ConversationPanel,
-	InputPanel
-)
+from .widgets.chat_list_panel import ChatListPanel
+from .widgets.chat_details_panel import ChatDetailsPanel
+from .widgets.conversation_panel import ConversationPanel
+from .widgets.input_panel import InputPanel
 
 
 class GptCliApp(App):
