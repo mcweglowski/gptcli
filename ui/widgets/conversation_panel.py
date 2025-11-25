@@ -60,7 +60,8 @@ class ConversationPanel(ScrollableContainer):
 			content = message.get("content", "")
 			
 			if role == "user":
-				user_header = Text("You:", style="bold cyan")
+				user_name = gptcli.USER_NAME or "You"
+				user_header = Text(f"{user_name}:", style="bold cyan")
 				user_content = Text(f"\n{content}")
 				user_text = Text.assemble(user_header, user_content)
 				user_widget = Static(user_text, classes="message user-message")

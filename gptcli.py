@@ -28,6 +28,7 @@ CONFIG_PATH = os.environ.get("GPTCLI_CONFIG_PATH", "config.json")
 
 DEFAULT_CONFIG = {
 	"default_model": "gpt-5.1",
+	"user_name": "You",
 	"pricing": {
 		"gpt-5.1": {"input": 2.50, "output": 10.00}
 	},
@@ -66,6 +67,8 @@ def load_config():
 			config["pricing"].update(data["pricing"])
 		if isinstance(data.get("default_model"), str):
 			config["default_model"] = data["default_model"]
+		if isinstance(data.get("user_name"), str):
+			config["user_name"] = data["user_name"]
 		if isinstance(data.get("system_prompts"), dict):
 			config["system_prompts"].update(data["system_prompts"])
 	return config
@@ -73,6 +76,7 @@ def load_config():
 
 CONFIG = load_config()
 DEFAULT_MODEL = CONFIG.get("default_model", DEFAULT_CONFIG["default_model"])
+USER_NAME = CONFIG.get("user_name", DEFAULT_CONFIG["user_name"])
 MODEL_PRICING = CONFIG.get("pricing", DEFAULT_CONFIG["pricing"])
 SYSTEM_PROMPTS = CONFIG.get("system_prompts", DEFAULT_CONFIG["system_prompts"])
 
