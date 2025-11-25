@@ -112,7 +112,7 @@ class GptCliApp(App):
 			else:
 				current_system_prompt = None
 			
-			# Prepare API messages (last 10) - filter out 'model' field
+			# Prepare API messages (last 10)
 			api_messages = messages[-10:] if len(messages) > 10 else messages.copy()
 			# Remove 'model' field from messages before sending to API
 			api_messages = [{k: v for k, v in msg.items() if k != "model"} for msg in api_messages]

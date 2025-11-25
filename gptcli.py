@@ -485,8 +485,6 @@ def main():
 
 		# Use only last 10 messages for API to avoid token limits
 		api_messages = messages[-10:] if len(messages) > 10 else messages
-		# Remove 'model' field from messages before sending to API
-		api_messages = [{k: v for k, v in msg.items() if k != "model"} for msg in api_messages]
 		
 		# Add system prompt if set (only if not already in messages)
 		if current_system_prompt:
@@ -705,7 +703,7 @@ def main():
 		
 		print(RESET_COLOR, end="")
 
-		messages.append({"role": "assistant", "content": full_response, "model": current_model})
+		messages.append({"role": "assistant", "content": full_response})
 		
 		# Save after receiving response
 		if chat_name:
