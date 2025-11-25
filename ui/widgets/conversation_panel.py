@@ -62,13 +62,16 @@ class ConversationPanel(ScrollableContainer):
 			if role == "user":
 				user_name = gptcli.USER_NAME or "You"
 				user_color = gptcli.USER_COLOR or "cyan"
+				# Create header with Text (same style as assistant)
 				user_header = Text(f"{user_name}:", style=f"bold {user_color}")
-				user_content = Text(f"\n{content}")
-				user_text = Text.assemble(user_header, user_content)
-				user_widget = Static(user_text, classes="message user-message")
-				# Set border color to match user color
-				user_widget.styles.border_left = ("solid", user_color)
-				self.conversation_container.mount(user_widget)
+				header_widget = Static(user_header, classes="message user-message-header")
+				header_widget.styles.border_left = ("solid", user_color)
+				# Create content
+				content_widget = Static(content, classes="message user-message-content")
+				content_widget.styles.border_left = ("solid", user_color)
+				# Mount both widgets directly
+				self.conversation_container.mount(header_widget)
+				self.conversation_container.mount(content_widget)
 			elif role == "assistant":
 				# Get model from message if available, otherwise from config
 				model = message.get("model")

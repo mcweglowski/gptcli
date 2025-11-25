@@ -87,6 +87,18 @@ Screen {
 	border-left: solid $primary;
 }
 
+.user-message-header {
+	background: $panel;
+	margin: 1 0 0 0;
+	padding: 1;
+}
+
+.user-message-content {
+	background: $panel;
+	margin: 0 0 1 0;
+	padding: 0 1 1 1;
+}
+
 .assistant-message {
 	background: $surface;
 	border-left: solid $success;
