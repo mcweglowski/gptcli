@@ -63,7 +63,7 @@ class ConversationPanel(ScrollableContainer):
 				user_name = gptcli.USER_NAME or "You"
 				user_color = gptcli.USER_COLOR or "cyan"
 				# Create header with Text (same style as assistant)
-				user_header = Text(f"{user_name}:", style=f"bold {user_color}")
+				user_header = Text(f"{user_name}", style=f"bold {user_color}")
 				header_widget = Static(user_header, classes="message user-message-header")
 				header_widget.styles.border_left = ("solid", user_color)
 				# Create content
@@ -80,7 +80,7 @@ class ConversationPanel(ScrollableContainer):
 					model = config.get("model", gptcli.DEFAULT_MODEL)
 				assistant_color = gptcli.ASSISTANT_COLOR or "green"
 				# Create header with Text (same style as user)
-				model_header = Text(f"{model}:", style=f"bold {assistant_color}")
+				model_header = Text(f"{model}", style=f"bold {assistant_color}")
 				header_widget = Static(model_header, classes="message assistant-message-header")
 				header_widget.styles.border_left = ("solid", assistant_color)
 				# Create content with Markdown
