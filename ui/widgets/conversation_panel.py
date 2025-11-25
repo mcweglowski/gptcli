@@ -76,14 +76,16 @@ class ConversationPanel(ScrollableContainer):
 					config = gptcli.load_chat_config(chat_name)
 					model = config.get("model", gptcli.DEFAULT_MODEL)
 				assistant_color = gptcli.ASSISTANT_COLOR or "green"
-				# Create header with Text (same style as user) and combine with content
-				# Use Text.assemble to combine header and content, but we need markdown for content
-				# So we'll use one Markdown widget with header in HTML format for color
-				header_html = f'<span style="color: {assistant_color}; font-weight: bold">{model}:</span>'
-				full_content = f"{header_html}\n\n{content}"
-				assistant_widget = Markdown(full_content, classes="message assistant-message")
-				assistant_widget.styles.border_left = ("solid", assistant_color)
-				self.conversation_container.mount(assistant_widget)
+				# Create header with Text (same style as user)
+				model_header = Text(f"{model}:", style=f"bold {assistant_color}")
+				header_widget = Static(model_header, classes="message assistant-message-header")
+				header_widget.styles.border_left = ("solid", assistant_color)
+				# Create content with Markdown
+				content_widget = Markdown(content, classes="message assistant-message-content")
+				content_widget.styles.border_left = ("solid", assistant_color)
+				# Mount both widgets directly
+				self.conversation_container.mount(header_widget)
+				self.conversation_container.mount(content_widget)
 		
 		self.post_message(ScrollToBottom())
 

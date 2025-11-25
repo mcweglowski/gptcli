@@ -93,6 +93,18 @@ Screen {
 	width: 100%;
 }
 
+.assistant-message-header {
+	background: $surface;
+	margin: 1 0 0 0;
+	padding: 1;
+}
+
+.assistant-message-content {
+	background: $surface;
+	margin: 0 0 1 0;
+	padding: 0 1 1 1;
+}
+
 .empty-message {
 	padding: 2;
 	text-align: center;
