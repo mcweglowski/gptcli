@@ -29,6 +29,8 @@ CONFIG_PATH = os.environ.get("GPTCLI_CONFIG_PATH", "config.json")
 DEFAULT_CONFIG = {
 	"default_model": "gpt-5.1",
 	"user_name": "You",
+	"user_color": "cyan",
+	"assistant_color": "green",
 	"pricing": {
 		"gpt-5.1": {"input": 2.50, "output": 10.00}
 	},
@@ -69,6 +71,10 @@ def load_config():
 			config["default_model"] = data["default_model"]
 		if isinstance(data.get("user_name"), str):
 			config["user_name"] = data["user_name"]
+		if isinstance(data.get("user_color"), str):
+			config["user_color"] = data["user_color"]
+		if isinstance(data.get("assistant_color"), str):
+			config["assistant_color"] = data["assistant_color"]
 		if isinstance(data.get("system_prompts"), dict):
 			config["system_prompts"].update(data["system_prompts"])
 	return config
@@ -77,6 +83,8 @@ def load_config():
 CONFIG = load_config()
 DEFAULT_MODEL = CONFIG.get("default_model", DEFAULT_CONFIG["default_model"])
 USER_NAME = CONFIG.get("user_name", DEFAULT_CONFIG["user_name"])
+USER_COLOR = CONFIG.get("user_color", DEFAULT_CONFIG["user_color"])
+ASSISTANT_COLOR = CONFIG.get("assistant_color", DEFAULT_CONFIG["assistant_color"])
 MODEL_PRICING = CONFIG.get("pricing", DEFAULT_CONFIG["pricing"])
 SYSTEM_PROMPTS = CONFIG.get("system_prompts", DEFAULT_CONFIG["system_prompts"])
 

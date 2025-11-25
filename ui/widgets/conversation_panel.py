@@ -61,10 +61,13 @@ class ConversationPanel(ScrollableContainer):
 			
 			if role == "user":
 				user_name = gptcli.USER_NAME or "You"
-				user_header = Text(f"{user_name}:", style="bold cyan")
+				user_color = gptcli.USER_COLOR or "cyan"
+				user_header = Text(f"{user_name}:", style=f"bold {user_color}")
 				user_content = Text(f"\n{content}")
 				user_text = Text.assemble(user_header, user_content)
 				user_widget = Static(user_text, classes="message user-message")
+				# Set border color to match user color
+				user_widget.styles.border_left = ("solid", user_color)
 				self.conversation_container.mount(user_widget)
 			elif role == "assistant":
 				# Get model from message if available, otherwise from config
@@ -72,9 +75,14 @@ class ConversationPanel(ScrollableContainer):
 				if not model:
 					config = gptcli.load_chat_config(chat_name)
 					model = config.get("model", gptcli.DEFAULT_MODEL)
-				header = f"**{model}:**\n\n"
-				full_content = header + content
+				assistant_color = gptcli.ASSISTANT_COLOR or "green"
+				# Create header with Text (same style as user) and combine with content
+				# Use Text.assemble to combine header and content, but we need markdown for content
+				# So we'll use one Markdown widget with header in HTML format for color
+				header_html = f'<span style="color: {assistant_color}; font-weight: bold">{model}:</span>'
+				full_content = f"{header_html}\n\n{content}"
 				assistant_widget = Markdown(full_content, classes="message assistant-message")
+				assistant_widget.styles.border_left = ("solid", assistant_color)
 				self.conversation_container.mount(assistant_widget)
 		
 		self.post_message(ScrollToBottom())
