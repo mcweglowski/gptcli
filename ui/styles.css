@@ -45,24 +45,24 @@ Screen {
 }
 
 #input-panel {
-	height: auto;
+	height: 1fr;
 	min-height: 3;
 	max-height: 33vh;
 	border: solid $primary;
 	background: $panel;
+	overflow-y: scroll;
 }
 
 #input-panel > Vertical {
 	width: 100%;
-	height: auto;
+	height: 100%;
 }
 
 #message-input {
 	width: 100%;
-	height: auto;
-	min-height: 1;
-	max-height: 33vh;
+	height: 100%;
 	margin: 1;
+	overflow-y: scroll;
 }
 
 #status-spinner {
