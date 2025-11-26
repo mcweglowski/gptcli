@@ -16,7 +16,7 @@ from rich.text import Text
 import gptcli
 from .widgets.chat_list_panel import ChatListPanel
 from .widgets.chat_details_panel import ChatDetailsPanel
-from .widgets.conversation_panel import ConversationPanel
+from .widgets.conversation_panel import ConversationPanel, AnimatedThinkingMessage
 from .widgets.input_panel import InputPanel
 
 
@@ -65,10 +65,6 @@ class GptCliApp(App):
 	
 	def send_message_to_api(self, chat_name: str, user_message: str) -> None:
 		"""Send message to API and update UI - async version."""
-		# Show spinner immediately
-		input_panel = self.query_one("#input-panel", InputPanel)
-		input_panel.show_spinner("Sending")
-		
 		# Update UI immediately - show user message
 		conversation_panel = self.query_one("#conversation-panel", ConversationPanel)
 		
@@ -83,13 +79,10 @@ class GptCliApp(App):
 		
 		# Update UI directly - show user message and loading indicator
 		conversation_panel.load_conversation(chat_name)
-		loading_widget = Static("[yellow]Thinking...[/yellow]", classes="loading-message")
+		loading_widget = AnimatedThinkingMessage(classes="loading-message")
 		conversation_panel.conversation_container.mount(loading_widget)
 		# Scroll to bottom after a brief delay to ensure widgets are rendered
 		conversation_panel.set_timer(0.1, lambda: conversation_panel.scroll_end(animate=False))
-		
-		# Update spinner text
-		input_panel.show_spinner("Thinking")
 		
 		# Start async API call
 		self._send_message_async(chat_name, user_message, messages)
@@ -214,9 +207,8 @@ class GptCliApp(App):
 		if chat_data:
 			details_panel.update_chat_details(chat_data)
 		
-		# Hide spinner and focus back on input
+		# Focus back on input
 		input_panel = self.query_one("#input-panel", InputPanel)
-		input_panel.hide_spinner()
 		input_panel.message_input.focus()
 	
 	def _update_ui_after_error(self, chat_name: str, error_msg: str) -> None:
@@ -231,8 +223,7 @@ class GptCliApp(App):
 		conversation_panel.conversation_container.mount(error_widget)
 		conversation_panel.scroll_end(animate=False)
 		
-		# Hide spinner and focus back on input
+		# Focus back on input
 		input_panel = self.query_one("#input-panel", InputPanel)
-		input_panel.hide_spinner()
 		input_panel.message_input.focus()
 

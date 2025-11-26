@@ -56,11 +56,6 @@ class InputPanel(Container):
 		super().__init__(*args, **kwargs)
 		self.border_title = "Input"
 		self.message_input: Optional[MessageInput] = None
-		self.status_spinner: Optional[Static] = None
-		self._spinner_interval = None
-		self._spinner_frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
-		self._spinner_index = 0
-		self._spinner_text = "Thinking"
 	
 	def compose(self) -> ComposeResult:
 		with Vertical():
@@ -71,31 +66,4 @@ class InputPanel(Container):
 				soft_wrap=True
 			)
 			yield self.message_input
-			self.status_spinner = Static("", id="status-spinner", classes="status-spinner")
-			yield self.status_spinner
-	
-	def show_spinner(self, text: str = "Thinking") -> None:
-		"""Show animated spinner with text."""
-		if self.status_spinner:
-			self._spinner_text = text
-			self.status_spinner.update(f"[yellow]{text} {self._spinner_frames[0]}[/yellow]")
-			self.status_spinner.visible = True
-			self._spinner_index = 0
-			if self._spinner_interval is None:
-				self._spinner_interval = self.set_interval(0.1, self._animate_spinner)
-	
-	def hide_spinner(self) -> None:
-		"""Hide spinner."""
-		if self.status_spinner:
-			self.status_spinner.visible = False
-			if self._spinner_interval:
-				self._spinner_interval.stop()
-				self._spinner_interval = None
-	
-	def _animate_spinner(self) -> None:
-		"""Animate spinner frame."""
-		if self.status_spinner and self.status_spinner.visible:
-			self._spinner_index = (self._spinner_index + 1) % len(self._spinner_frames)
-			frame = self._spinner_frames[self._spinner_index]
-			self.status_spinner.update(f"[yellow]{self._spinner_text} {frame}[/yellow]")
 

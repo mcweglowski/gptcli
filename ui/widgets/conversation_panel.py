@@ -7,6 +7,40 @@ from rich.text import Text
 import gptcli
 
 
+class AnimatedThinkingMessage(Static):
+	"""Animated 'Thinking' message with spinner."""
+	
+	SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+	
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self._spinner_index = 0
+		self._spinner_interval = None
+	
+	def on_mount(self) -> None:
+		"""Start animation when widget is mounted."""
+		self._spinner_index = 0
+		self._update_text()
+		# Use smaller interval for smoother animation (0.05s instead of 0.1s)
+		self._spinner_interval = self.set_interval(0.05, self._animate)
+	
+	def on_unmount(self) -> None:
+		"""Stop animation when widget is unmounted."""
+		if self._spinner_interval:
+			self._spinner_interval.stop()
+			self._spinner_interval = None
+	
+	def _animate(self) -> None:
+		"""Animate spinner frame."""
+		self._spinner_index = (self._spinner_index + 1) % len(self.SPINNER_FRAMES)
+		self._update_text()
+	
+	def _update_text(self) -> None:
+		"""Update text with current spinner frame."""
+		frame = self.SPINNER_FRAMES[self._spinner_index]
+		self.update(f"[yellow]Thinking {frame}[/yellow]")
+
+
 class ScrollToBottom(Message):
 	"""Message to scroll conversation to bottom."""
 	
