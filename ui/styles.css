@@ -50,7 +50,6 @@ Screen {
 	max-height: 33vh;
 	border: solid $primary;
 	background: $panel;
-	overflow-y: scroll;
 }
 
 #input-panel > Vertical {
