@@ -25,23 +25,17 @@ def get_available_chats():
 		config = gptcli.load_chat_config(chat)
 		model = config.get("model", gptcli.DEFAULT_MODEL)
 		conversation = gptcli.load_conversation(chat)
-		# Use file modification time for sorting
-		conv_path = gptcli.get_conversation_path(chat)
-		if os.path.exists(conv_path):
-			last_modified = os.path.getmtime(conv_path)
-		else:
-			last_modified = 0
 		metadata.append({
 			"name": chat,
 			"model": model,
-			"message_count": len(conversation),
-			"last_modified": last_modified
+			"message_count": len(conversation)
 		})
-	# Sort by last_modified descending (most recently modified first)
-	return sorted(metadata, key=lambda item: item["last_modified"], reverse=True)
+	return sorted(metadata, key=lambda item: item["name"])
 
 
 def format_chat_entry(chat):
 	"""Format chat entry for display in list."""
-	return chat["name"]
+	name = chat["name"] if len(chat["name"]) <= 24 else chat["name"][:21] + "..."
+	model = chat["model"]
+	return f"{name:<24} | {model:<16} | {chat['message_count']:>5} msgs"
 

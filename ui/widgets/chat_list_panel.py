@@ -77,20 +77,14 @@ class ChatListPanel(Container):
 			self.chat_list_view.append(ChatListItem(chat))
 		
 		if selected_chat_name and preserve_selection:
-			# Use call_after_refresh to restore selection after list is fully rendered
-			def restore():
-				self._restore_selection(selected_chat_name)
-			self.call_after_refresh(restore)
+			self._restore_selection(selected_chat_name)
 	
 	def _restore_selection(self, chat_name: str) -> None:
 		"""Restore selection after loading chats."""
 		for i, item in enumerate(self.chat_list_view.children):
 			if isinstance(item, ChatListItem) and item.chat_data["name"] == chat_name:
 				self.chat_list_view.index = i
-				# Update last highlighted to prevent _check_selection_change from triggering
-				self._last_highlighted = self.chat_list_view.highlighted_child
 				self.update_details_on_selection()
-				# Ensure conversation is loaded for the restored chat
 				app = self.app
 				if app:
 					conversation_panel = app.query_one("#conversation-panel", ConversationPanel)

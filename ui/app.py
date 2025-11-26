@@ -6,7 +6,6 @@ Main application for GPT CLI UI.
 import os
 import time
 import threading
-from datetime import datetime
 from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
@@ -76,9 +75,8 @@ class GptCliApp(App):
 		# Load conversation
 		messages = gptcli.load_conversation(chat_name)
 		
-		# Add user message with timestamp (moment of sending)
-		timestamp = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
-		messages.append({"role": "user", "content": user_message, "timestamp": timestamp})
+		# Add user message
+		messages.append({"role": "user", "content": user_message})
 		
 		# Save conversation immediately
 		gptcli.save_conversation(chat_name, messages)
@@ -149,9 +147,8 @@ class GptCliApp(App):
 				else:
 					assistant_message = str(response)
 				
-				# Add assistant message to conversation with model info and timestamp (moment of receiving response)
-				timestamp = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
-				messages.append({"role": "assistant", "content": assistant_message, "model": model, "timestamp": timestamp})
+				# Add assistant message to conversation with model info
+				messages.append({"role": "assistant", "content": assistant_message, "model": model})
 				gptcli.save_conversation(chat_name, messages)
 				
 				# Calculate statistics
@@ -191,10 +188,6 @@ class GptCliApp(App):
 	def _update_ui_after_response(self, chat_name: str) -> None:
 		"""Update UI after successful API response."""
 		conversation_panel = self.query_one("#conversation-panel", ConversationPanel)
-		
-		# Refresh chat list first to update sorting based on file modification time
-		chat_list_panel = self.query_one("#chat-list-panel", ChatListPanel)
-		chat_list_panel.load_chats(preserve_selection=True)
 		
 		# Update UI directly - remove loading indicator and reload conversation
 		conversation_panel.load_conversation(chat_name)

@@ -492,7 +492,9 @@ def main():
 		messages.append({"role": "user", "content":user_input})
 
 		# Use only last 10 messages for API to avoid token limits
-		api_messages = messages[-10:] if len(messages) > 10 else messages
+		api_messages = messages[-10:] if len(messages) > 10 else messages.copy()
+		# Remove 'model' and 'timestamp' fields from messages before sending to API
+		api_messages = [{k: v for k, v in msg.items() if k not in ("model", "timestamp")} for msg in api_messages]
 		
 		# Add system prompt if set (only if not already in messages)
 		if current_system_prompt:
