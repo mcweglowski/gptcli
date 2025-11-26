@@ -35,7 +35,5 @@ def get_available_chats():
 
 def format_chat_entry(chat):
 	"""Format chat entry for display in list."""
-	name = chat["name"] if len(chat["name"]) <= 24 else chat["name"][:21] + "..."
-	model = chat["model"]
-	return f"{name:<24} | {model:<16} | {chat['message_count']:>5} msgs"
+	return chat["name"]
 
