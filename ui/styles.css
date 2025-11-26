@@ -39,13 +39,15 @@ Screen {
 }
 
 #conversation-panel {
-	height: 85%;
+	height: 1fr;
 	border: solid $primary;
 	background: $surface;
 }
 
 #input-panel {
-	height: 15%;
+	height: auto;
+	min-height: 3;
+	max-height: 33vh;
 	border: solid $primary;
 	background: $panel;
 }
