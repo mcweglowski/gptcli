@@ -172,6 +172,17 @@ Screen {
 	overflow-y: auto;
 }
 
+#system-prompt-edit-input {
+	width: 100%;
+	height: auto;
+	min-height: 6;
+	max-height: 18;
+	margin-bottom: 1;
+	padding: 1;
+	border: solid $primary;
+	overflow-y: auto;
+}
+
 .modal-buttons {
 	width: 100%;
 	height: auto;

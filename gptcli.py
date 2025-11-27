@@ -167,6 +167,23 @@ def save_system_prompt(chat_name, prompt):
 		print(f"{RESET_COLOR}Warning: Could not save system prompt to {file_path}")
 
 
+def load_system_prompt(chat_name):
+	"""Loads the custom system prompt for a chat, if it exists."""
+	file_path = get_system_prompt_path(chat_name)
+	if not os.path.exists(file_path):
+		return ""
+	try:
+		with open(file_path, "r", encoding="utf-8") as f:
+			data = json.load(f)
+			if isinstance(data, dict):
+				return data.get("system_prompt", "") or ""
+			if isinstance(data, str):
+				return data
+	except (json.JSONDecodeError, IOError):
+		return ""
+	return ""
+
+
 def load_chat_config(chat_name):
 	"""Loads per-chat configuration."""
 	file_path = get_chat_config_path(chat_name)

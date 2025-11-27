@@ -12,6 +12,7 @@ from .conversation_panel import ConversationPanel
 from .chat_details_panel import ChatDetailsPanel
 from .new_chat_modal import NewChatModal
 from .delete_chat_modal import DeleteChatModal
+from .edit_system_prompt_modal import EditSystemPromptModal
 
 
 class ChatListItem(ListItem):
@@ -31,6 +32,7 @@ class ChatListPanel(Container):
 	BINDINGS = [
 		Binding("n", "new_chat", "New chat"),
 		Binding("d", "delete_chat", "Delete chat"),
+		Binding("e", "edit_chat", "Edit system prompt"),
 	]
 	
 	def __init__(self, *args, **kwargs):
@@ -210,4 +212,29 @@ class ChatListPanel(Container):
 			details_panel.update_chat_details(None)
 		
 		app.push_screen(DeleteChatModal(chat_name), handle_result)
+
+	def action_edit_chat(self) -> None:
+		"""Edit system prompt for selected chat."""
+		chat_data = self.get_selected_chat()
+		if not chat_data:
+			app = self.app
+			if app:
+				app.bell()
+			return
+		
+		chat_name = chat_data["name"]
+		app = self.app
+		if not app:
+			return
+		
+		current_prompt = gptcli.load_system_prompt(chat_name)
+		
+		def handle_result(new_prompt):
+			if new_prompt is None:
+				return
+			gptcli.save_system_prompt(chat_name, new_prompt)
+			details_panel = app.query_one("#chat-details-panel", ChatDetailsPanel)
+			details_panel.update_chat_details(chat_data)
+		
+		app.push_screen(EditSystemPromptModal(chat_name, current_prompt), handle_result)
 
