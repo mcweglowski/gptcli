@@ -71,8 +71,10 @@ class GptCliApp(App):
 		# Load conversation
 		messages = gptcli.load_conversation(chat_name)
 		
-		# Add user message
-		messages.append({"role": "user", "content": user_message})
+		# Add user message with timestamp
+		from datetime import datetime
+		request_timestamp = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+		messages.append({"role": "user", "content": user_message, "request_timestamp": request_timestamp})
 		
 		# Save conversation immediately
 		gptcli.save_conversation(chat_name, messages)
@@ -111,8 +113,9 @@ class GptCliApp(App):
 			
 			# Prepare API messages (last 10)
 			api_messages = messages[-10:] if len(messages) > 10 else messages.copy()
-			# Remove 'model' and 'timestamp' fields from messages before sending to API
-			api_messages = [{k: v for k, v in msg.items() if k not in ("model", "timestamp")} for msg in api_messages]
+			# Remove metadata fields from messages before sending to API
+			excluded_fields = ("model", "timestamp", "request_timestamp", "response_timestamp", "statistics")
+			api_messages = [{k: v for k, v in msg.items() if k not in excluded_fields} for msg in api_messages]
 			
 			# Add system prompt if set
 			if current_system_prompt:
@@ -144,10 +147,6 @@ class GptCliApp(App):
 				else:
 					assistant_message = str(response)
 				
-				# Add assistant message to conversation with model info
-				messages.append({"role": "assistant", "content": assistant_message, "model": model})
-				gptcli.save_conversation(chat_name, messages)
-				
 				# Calculate statistics
 				elapsed_time = time.time() - start_time
 				input_tokens = 0
@@ -164,6 +163,27 @@ class GptCliApp(App):
 				# Calculate cost
 				if input_tokens > 0 or output_tokens > 0:
 					cost = gptcli.calculate_cost(model, input_tokens, output_tokens)
+				
+				# Prepare statistics dict
+				statistics = {
+					"input_tokens": input_tokens,
+					"output_tokens": output_tokens,
+					"total_tokens": total_tokens,
+					"cost": cost,
+					"elapsed_time": elapsed_time
+				}
+				
+				# Add assistant message to conversation with model info, timestamp and statistics
+				from datetime import datetime
+				response_timestamp = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+				messages.append({
+					"role": "assistant",
+					"content": assistant_message,
+					"model": model,
+					"response_timestamp": response_timestamp,
+					"statistics": statistics
+				})
+				gptcli.save_conversation(chat_name, messages)
 				
 				# Update statistics
 				gptcli.update_statistics(chat_name, input_tokens, output_tokens, total_tokens, cost, elapsed_time)
