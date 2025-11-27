@@ -96,14 +96,18 @@ class GptCliApp(App):
 			model = config.get("model", gptcli.DEFAULT_MODEL)
 			
 			# Get system prompt
-			system_prompt = config.get("system_prompt")
-			if system_prompt:
-				if system_prompt in gptcli.SYSTEM_PROMPTS:
-					current_system_prompt = gptcli.SYSTEM_PROMPTS[system_prompt]
-				else:
-					current_system_prompt = system_prompt  # Custom prompt
+			custom_prompt = gptcli.load_system_prompt(chat_name)
+			if custom_prompt:
+				current_system_prompt = custom_prompt
 			else:
-				current_system_prompt = None
+				system_prompt = config.get("system_prompt")
+				if system_prompt:
+					if system_prompt in gptcli.SYSTEM_PROMPTS:
+						current_system_prompt = gptcli.SYSTEM_PROMPTS[system_prompt]
+					else:
+						current_system_prompt = system_prompt  # Custom prompt
+				else:
+					current_system_prompt = None
 			
 			# Prepare API messages (last 10)
 			api_messages = messages[-10:] if len(messages) > 10 else messages.copy()
