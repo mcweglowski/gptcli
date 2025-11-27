@@ -140,6 +140,33 @@ def get_chat_config_path(chat_name):
 	return os.path.join(CONVERSATIONS_DIR, f"{chat_name}.config.json")
 
 
+def get_system_prompt_path(chat_name):
+	"""Returns the path to the custom system prompt file."""
+	if not os.path.exists(CONVERSATIONS_DIR):
+		os.makedirs(CONVERSATIONS_DIR)
+	system_prompts_dir = os.path.join(CONVERSATIONS_DIR, "system_prompts")
+	if not os.path.exists(system_prompts_dir):
+		os.makedirs(system_prompts_dir)
+	return os.path.join(system_prompts_dir, f"{chat_name}.json")
+
+
+def save_system_prompt(chat_name, prompt):
+	"""Saves (or removes) the custom system prompt for a chat."""
+	file_path = get_system_prompt_path(chat_name)
+	if not prompt:
+		if os.path.exists(file_path):
+			try:
+				os.remove(file_path)
+			except OSError:
+				print(f"{RESET_COLOR}Warning: Could not remove system prompt file {file_path}")
+		return
+	try:
+		with open(file_path, "w", encoding="utf-8") as f:
+			json.dump({"system_prompt": prompt}, f, ensure_ascii=False, indent=2)
+	except IOError:
+		print(f"{RESET_COLOR}Warning: Could not save system prompt to {file_path}")
+
+
 def load_chat_config(chat_name):
 	"""Loads per-chat configuration."""
 	file_path = get_chat_config_path(chat_name)

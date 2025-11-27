@@ -47,9 +47,10 @@ Screen {
 #input-panel {
 	height: 1fr;
 	min-height: 3;
-	max-height: 33vh;
+	max-height: 25vh;
 	border: solid $primary;
 	background: $panel;
+	overflow-y: scroll;
 }
 
 #input-panel > Vertical {
@@ -92,6 +93,16 @@ Screen {
 	background: $panel;
 	margin: 1 0 0 0;
 	padding: 1;
+}
+
+.message-header-left {
+	width: 1fr;
+}
+
+.message-header-right {
+	width: auto;
+	text-align: right;
+	color: $text-muted;
 }
 
 .user-message-content {
@@ -148,6 +159,17 @@ Screen {
 #chat-name-input {
 	width: 100%;
 	margin-bottom: 1;
+}
+
+#system-prompt-input {
+	width: 100%;
+	height: auto;
+	min-height: 4;
+	max-height: 12;
+	margin-bottom: 1;
+	padding: 1;
+	border: solid $primary;
+	overflow-y: auto;
 }
 
 .modal-buttons {

@@ -1,7 +1,7 @@
 from textual.app import ComposeResult
 from textual.containers import Vertical, Horizontal, Center
 from textual.screen import ModalScreen
-from textual.widgets import Label, Input, Button
+from textual.widgets import Label, Input, Button, TextArea
 
 
 class NewChatModal(ModalScreen):
@@ -20,6 +20,14 @@ class NewChatModal(ModalScreen):
 					id="chat-name-input"
 				)
 				yield self.name_input
+				yield Label("System prompt (optional):", classes="modal-subtitle")
+				self.system_prompt_input = TextArea(
+					text="",
+					id="system-prompt-input",
+					show_line_numbers=False,
+					soft_wrap=True
+				)
+				yield self.system_prompt_input
 				with Horizontal(classes="modal-buttons"):
 					self.yes_button = Button("Yes", id="modal-ok", variant="primary")
 					yield self.yes_button
@@ -38,8 +46,12 @@ class NewChatModal(ModalScreen):
 		"""Handle button presses."""
 		if event.button.id == "modal-ok":
 			chat_name = self.name_input.value.strip()
+			system_prompt = self._get_system_prompt_value()
 			if chat_name:
-				self.dismiss(chat_name)
+				self.dismiss({
+					"name": chat_name,
+					"system_prompt": system_prompt
+				})
 			else:
 				self.app.bell()
 		elif event.button.id == "modal-cancel":
@@ -47,14 +59,26 @@ class NewChatModal(ModalScreen):
 	
 	def on_input_submitted(self, event) -> None:
 		"""Handle Enter key in input."""
-		if event.input.id == "chat-name-input":
-			chat_name = event.input.value.strip()
+		if event.input.id in ("chat-name-input", "system-prompt-input"):
+			chat_name = self.name_input.value.strip()
+			system_prompt = self._get_system_prompt_value()
 			if chat_name:
-				self.dismiss(chat_name)
+				self.dismiss({
+					"name": chat_name,
+					"system_prompt": system_prompt
+				})
 			else:
 				self.app.bell()
 	
 	def action_cancel(self) -> None:
 		"""Cancel modal."""
 		self.dismiss(None)
+
+	def _get_system_prompt_value(self) -> str:
+		"""Return trimmed system prompt text."""
+		if not hasattr(self, "system_prompt_input") or self.system_prompt_input is None:
+			return ""
+		if hasattr(self.system_prompt_input, "text"):
+			return self.system_prompt_input.text.strip()
+		return getattr(self.system_prompt_input, "value", "").strip()
 

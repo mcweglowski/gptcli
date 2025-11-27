@@ -130,12 +130,22 @@ class ChatListPanel(Container):
 		if not app:
 			return
 		
-		def handle_result(chat_name: Optional[str]) -> None:
+		def handle_result(result) -> None:
 			"""Handle result from modal - create new chat and set it as active."""
-			if not chat_name or not chat_name.strip():
+			if not result:
 				return
 			
-			chat_name = chat_name.strip()
+			if isinstance(result, str):
+				chat_name = result.strip()
+				system_prompt = ""
+			else:
+				chat_name = (result.get("name", "") if isinstance(result, dict) else "").strip()
+				system_prompt = (result.get("system_prompt", "") if isinstance(result, dict) else "").strip()
+			
+			if not chat_name:
+				app.bell()
+				return
+			
 			chat_path = gptcli.get_conversation_path(chat_name)
 			if os.path.exists(chat_path):
 				app.bell()
@@ -144,6 +154,8 @@ class ChatListPanel(Container):
 				return
 			
 			gptcli.save_conversation(chat_name, [])
+			if system_prompt:
+				gptcli.save_system_prompt(chat_name, system_prompt)
 			self.load_chats(preserve_selection=False)
 			self._restore_selection(chat_name)
 			
@@ -178,6 +190,7 @@ class ChatListPanel(Container):
 			chat_path = gptcli.get_conversation_path(chat_name)
 			config_path = gptcli.get_chat_config_path(chat_name)
 			stats_path = gptcli.get_stats_path(chat_name)
+			system_prompt_path = gptcli.get_system_prompt_path(chat_name)
 			
 			if os.path.exists(chat_path):
 				os.remove(chat_path)
@@ -185,6 +198,8 @@ class ChatListPanel(Container):
 				os.remove(config_path)
 			if os.path.exists(stats_path):
 				os.remove(stats_path)
+			if os.path.exists(system_prompt_path):
+				os.remove(system_prompt_path)
 			
 			self.load_chats(preserve_selection=False)
 			
