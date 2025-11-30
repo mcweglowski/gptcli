@@ -95,6 +95,7 @@ class ConversationPanel(ScrollableContainer):
 			
 			if role == "user":
 				user_name = gptcli.USER_NAME or "You"
+				timestamp = message.get("request_timestamp", "")
 				
 				# Create header with Horizontal container
 				header_container = Horizontal()
@@ -107,7 +108,7 @@ class ConversationPanel(ScrollableContainer):
 				header_container.mount(name_widget)
 				
 				# Create Static with date inside Horizontal
-				date_widget = Static("30-Nov-2024 18:57:39", classes="message-header-right")
+				date_widget = Static(timestamp, classes="message-header-right")
 				header_container.mount(date_widget)
 				
 				# Create content
@@ -119,6 +120,7 @@ class ConversationPanel(ScrollableContainer):
 				if not model:
 					config = gptcli.load_chat_config(chat_name)
 					model = config.get("model", gptcli.DEFAULT_MODEL)
+				timestamp = message.get("response_timestamp", "")
 				
 				# Create header with Horizontal container
 				header_container = Horizontal()
@@ -131,7 +133,7 @@ class ConversationPanel(ScrollableContainer):
 				header_container.mount(name_widget)
 				
 				# Create Static with date inside Horizontal
-				date_widget = Static("30-Nov-2024 18:57:39", classes="message-header-right")
+				date_widget = Static(timestamp, classes="message-header-right")
 				header_container.mount(date_widget)
 				
 				# Create content with Markdown
