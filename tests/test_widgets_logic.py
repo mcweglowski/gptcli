@@ -139,7 +139,9 @@ class DummyApp:
 
 
 class DummyContainer:
-    pass
+    def __init__(self, *args, **kwargs):
+        self.mount = Mock()
+        self.is_attached = True
 
 
 class DummyStyles:
