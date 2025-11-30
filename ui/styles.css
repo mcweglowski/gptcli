@@ -108,6 +108,7 @@ Screen {
 	width: 1fr;
 	text-align: right;
 	color: $text-muted;
+	opacity: 0.25;
 }
 
 .user-message-content {

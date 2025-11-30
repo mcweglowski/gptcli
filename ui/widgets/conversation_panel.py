@@ -95,6 +95,7 @@ class ConversationPanel(ScrollableContainer):
 			
 			if role == "user":
 				user_name = gptcli.USER_NAME or "You"
+				user_color = gptcli.USER_COLOR or "cyan"
 				timestamp = message.get("request_timestamp", "")
 				
 				# Create header with Horizontal container
@@ -104,7 +105,8 @@ class ConversationPanel(ScrollableContainer):
 				self.conversation_container.mount(header_container)
 				
 				# Create Static with user name inside Horizontal (mounted first)
-				name_widget = Static(user_name, classes="message-header-left")
+				user_header = Text(f"{user_name}", style=f"bold {user_color}")
+				name_widget = Static(user_header, classes="message-header-left")
 				header_container.mount(name_widget)
 				
 				# Create Static with date inside Horizontal
@@ -120,6 +122,7 @@ class ConversationPanel(ScrollableContainer):
 				if not model:
 					config = gptcli.load_chat_config(chat_name)
 					model = config.get("model", gptcli.DEFAULT_MODEL)
+				assistant_color = gptcli.ASSISTANT_COLOR or "green"
 				timestamp = message.get("response_timestamp", "")
 				
 				# Create header with Horizontal container
@@ -129,7 +132,8 @@ class ConversationPanel(ScrollableContainer):
 				self.conversation_container.mount(header_container)
 				
 				# Create Static with model name inside Horizontal (mounted first)
-				name_widget = Static(model, classes="message-header-left")
+				model_header = Text(f"{model}", style=f"bold {assistant_color}")
+				name_widget = Static(model_header, classes="message-header-left")
 				header_container.mount(name_widget)
 				
 				# Create Static with date inside Horizontal
