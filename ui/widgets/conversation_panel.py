@@ -103,13 +103,11 @@ class ConversationPanel(ScrollableContainer):
 				self.conversation_container.mount(header_container)
 				
 				# Create Static with user name inside Horizontal (mounted first)
-				name_widget = Static(user_name)
-				name_widget.styles.width = "1fr"
+				name_widget = Static(user_name, classes="message-header-left")
 				header_container.mount(name_widget)
 				
 				# Create Static with date inside Horizontal
-				date_widget = Static("30-Nov-2024 18:57:39")
-				date_widget.styles.width = "1fr"
+				date_widget = Static("30-Nov-2024 18:57:39", classes="message-header-right")
 				header_container.mount(date_widget)
 				
 				# Create content
@@ -129,13 +127,11 @@ class ConversationPanel(ScrollableContainer):
 				self.conversation_container.mount(header_container)
 				
 				# Create Static with model name inside Horizontal (mounted first)
-				name_widget = Static(model)
-				name_widget.styles.width = "1fr"
+				name_widget = Static(model, classes="message-header-left")
 				header_container.mount(name_widget)
 				
 				# Create Static with date inside Horizontal
-				date_widget = Static("30-Nov-2024 18:57:39")
-				date_widget.styles.width = "1fr"
+				date_widget = Static("30-Nov-2024 18:57:39", classes="message-header-right")
 				header_container.mount(date_widget)
 				
 				# Create content with Markdown

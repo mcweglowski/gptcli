@@ -95,12 +95,17 @@ Screen {
 	padding: 1;
 }
 
-.message-header-left {
+.message-header-item {
 	width: 1fr;
 }
 
+.message-header-left {
+	width: 1fr;
+	text-align: left;
+}
+
 .message-header-right {
-	width: auto;
+	width: 1fr;
 	text-align: right;
 	color: $text-muted;
 }
