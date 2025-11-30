@@ -222,33 +222,29 @@ class TestUIUtils(unittest.TestCase):
 			"message_count": 10
 		}
 		formatted = format_chat_entry(chat)
-		self.assertIn("test", formatted)
-		self.assertIn("gpt-5.1", formatted)
-		self.assertIn("10", formatted)
+		self.assertEqual("test", formatted)
 	
 	def test_format_chat_entry_long_name(self):
-		"""Test formatting chat entry with long name (truncated)."""
+		"""Test formatting chat entry with long name (not truncated)."""
 		chat = {
 			"name": "very_long_chat_name_that_exceeds_limit",
 			"model": "gpt-5.1",
 			"message_count": 10
 		}
 		formatted = format_chat_entry(chat)
-		# Should be truncated to 21 chars + "..."
-		self.assertIn("...", formatted)
-		self.assertNotIn("very_long_chat_name_that_exceeds_limit", formatted)
+		# Should return full name without truncation
+		self.assertEqual("very_long_chat_name_that_exceeds_limit", formatted)
 	
 	def test_format_chat_entry_exact_length(self):
-		"""Test formatting chat entry with name at exact truncation length."""
+		"""Test formatting chat entry with name at exact length."""
 		chat = {
 			"name": "a" * 24,  # Exactly 24 characters
 			"model": "gpt-5.1",
 			"message_count": 10
 		}
 		formatted = format_chat_entry(chat)
-		# Should not be truncated
-		self.assertNotIn("...", formatted)
-		self.assertIn("a" * 24, formatted)
+		# Should return full name
+		self.assertEqual("a" * 24, formatted)
 
 
 if __name__ == '__main__':

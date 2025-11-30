@@ -224,8 +224,7 @@ class TestUIUtilsExtended(unittest.TestCase):
             "message_count": 10
         }
         formatted = format_chat_entry(chat)
-        self.assertIn("gpt-5.1", formatted)
-        self.assertIn("10", formatted)
+        self.assertEqual("", formatted)
 
     def test_format_chat_entry_very_long_name(self):
         """Test formatting chat entry with very long name (>100 chars)."""
@@ -236,30 +235,22 @@ class TestUIUtilsExtended(unittest.TestCase):
             "message_count": 10
         }
         formatted = format_chat_entry(chat)
-        # Should be truncated to 21 chars + "..."
-        self.assertIn("...", formatted)
-        self.assertNotIn(very_long_name, formatted)
-        # Check it's properly truncated
-        self.assertIn(very_long_name[:21], formatted)
+        # Should return full name without truncation
+        self.assertEqual(very_long_name, formatted)
 
     def test_format_chat_entry_different_message_counts(self):
-        """Test formatting chat entry with different message counts."""
-        test_cases = [
-            (0, "0 msgs"),
-            (1, "1 msgs"),
-            (100, "100 msgs"),
-            (1000, "1000 msgs"),
-            (99999, "99999 msgs"),
-        ]
+        """Test formatting chat entry with different message counts (should ignore counts)."""
+        test_cases = [0, 1, 100, 1000, 99999]
 
-        for count, expected_substring in test_cases:
+        for count in test_cases:
             chat = {
                 "name": "test",
                 "model": "gpt-5.1",
                 "message_count": count
             }
             formatted = format_chat_entry(chat)
-            self.assertIn(expected_substring, formatted, f"Failed for count {count}")
+            # Should return only the name, regardless of message count
+            self.assertEqual("test", formatted, f"Failed for count {count}")
 
     def test_format_chat_entry_exact_24_chars(self):
         """Test formatting chat entry with name exactly 24 characters."""
@@ -270,12 +261,11 @@ class TestUIUtilsExtended(unittest.TestCase):
             "message_count": 10
         }
         formatted = format_chat_entry(chat)
-        # Should not be truncated (24 is the limit)
-        self.assertNotIn("...", formatted)
-        self.assertIn(exact_name, formatted)
+        # Should return full name
+        self.assertEqual(exact_name, formatted)
 
     def test_format_chat_entry_25_chars(self):
-        """Test formatting chat entry with name 25 characters (should be truncated)."""
+        """Test formatting chat entry with name 25 characters (should not be truncated)."""
         long_name = "a" * 25
         chat = {
             "name": long_name,
@@ -283,10 +273,8 @@ class TestUIUtilsExtended(unittest.TestCase):
             "message_count": 10
         }
         formatted = format_chat_entry(chat)
-        # Should be truncated to 21 chars + "..."
-        self.assertIn("...", formatted)
-        self.assertIn(long_name[:21], formatted)
-        self.assertNotIn(long_name, formatted)
+        # Should return full name without truncation
+        self.assertEqual(long_name, formatted)
 
 
 if __name__ == '__main__':

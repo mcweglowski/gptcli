@@ -1,5 +1,5 @@
 from textual.app import ComposeResult
-from textual.containers import ScrollableContainer, Vertical
+from textual.containers import ScrollableContainer, Vertical, Horizontal
 from textual.message import Message
 from textual.widgets import Static, Markdown
 from rich.text import Text
@@ -96,15 +96,15 @@ class ConversationPanel(ScrollableContainer):
 			if role == "user":
 				user_name = gptcli.USER_NAME or "You"
 				user_color = gptcli.USER_COLOR or "cyan"
-				# Create header with Text (same style as assistant)
-				user_header = Text(f"{user_name}", style=f"bold {user_color}")
-				header_widget = Static(user_header, classes="message user-message-header")
+				
+				# Create header with user name
+				header_widget = Static(user_name, classes="message user-message-header")
 				header_widget.styles.border_left = ("solid", user_color)
+				self.conversation_container.mount(header_widget)
+				
 				# Create content
 				content_widget = Static(content, classes="message user-message-content")
 				content_widget.styles.border_left = ("solid", user_color)
-				# Mount both widgets directly
-				self.conversation_container.mount(header_widget)
 				self.conversation_container.mount(content_widget)
 			elif role == "assistant":
 				# Get model from message if available, otherwise from config
@@ -113,15 +113,15 @@ class ConversationPanel(ScrollableContainer):
 					config = gptcli.load_chat_config(chat_name)
 					model = config.get("model", gptcli.DEFAULT_MODEL)
 				assistant_color = gptcli.ASSISTANT_COLOR or "green"
-				# Create header with Text (same style as user)
-				model_header = Text(f"{model}", style=f"bold {assistant_color}")
-				header_widget = Static(model_header, classes="message assistant-message-header")
+				
+				# Create header with model name
+				header_widget = Static(model, classes="message assistant-message-header")
 				header_widget.styles.border_left = ("solid", assistant_color)
+				self.conversation_container.mount(header_widget)
+				
 				# Create content with Markdown
 				content_widget = Markdown(content, classes="message assistant-message-content")
 				content_widget.styles.border_left = ("solid", assistant_color)
-				# Mount both widgets directly
-				self.conversation_container.mount(header_widget)
 				self.conversation_container.mount(content_widget)
 		
 		self.post_message(ScrollToBottom())
