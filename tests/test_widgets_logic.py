@@ -413,8 +413,8 @@ class TestConversationPanelLogic(unittest.TestCase):
 
         panel.load_conversation(chat_name)
 
-        # Should mount header and content for user message
-        self.assertEqual(panel.conversation_container.mount.call_count, 2)
+        # Should mount message_container (which contains header and content) for user message
+        self.assertEqual(panel.conversation_container.mount.call_count, 1)
 
     def test_load_conversation_formats_assistant_messages(self):
         """Test load_conversation formats assistant messages correctly."""
@@ -437,8 +437,8 @@ class TestConversationPanelLogic(unittest.TestCase):
 
         panel.load_conversation(chat_name)
 
-        # Should mount header and content for assistant message
-        self.assertEqual(panel.conversation_container.mount.call_count, 2)
+        # Should mount message_container (which contains header and content) for assistant message
+        self.assertEqual(panel.conversation_container.mount.call_count, 1)
 
     def test_load_conversation_handles_missing_model(self):
         """Test load_conversation handles messages without model (gets from config)."""
@@ -466,8 +466,8 @@ class TestConversationPanelLogic(unittest.TestCase):
 
         panel.load_conversation(chat_name)
 
-        # Should still mount widgets
-        self.assertEqual(panel.conversation_container.mount.call_count, 2)
+        # Should still mount message_container (which contains header and content)
+        self.assertEqual(panel.conversation_container.mount.call_count, 1)
 
 
 class TestChatDetailsPanelLogic(unittest.TestCase):

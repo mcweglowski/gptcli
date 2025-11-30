@@ -98,12 +98,19 @@ class ConversationPanel(ScrollableContainer):
 				user_color = gptcli.USER_COLOR or "cyan"
 				timestamp = message.get("request_timestamp", "")
 				
+				# Create wrapper container for entire message (header + content)
+				message_container = Vertical()
+				message_container.styles.border_left = ("solid", user_color)
+				message_container.styles.margin_bottom = 2
+				
+				# Mount message container first
+				self.conversation_container.mount(message_container)
+				
 				# Create header with Horizontal container
 				header_container = Horizontal()
-				header_container.styles.border_left = ("solid", user_color)
 				
-				# Mount header container first
-				self.conversation_container.mount(header_container)
+				# Mount header container to message container
+				message_container.mount(header_container)
 				
 				# Create Static with user name inside Horizontal (mounted first)
 				user_header = Text(f"{user_name}", style=f"bold {user_color}")
@@ -116,8 +123,9 @@ class ConversationPanel(ScrollableContainer):
 				
 				# Create content
 				content_widget = Static(content, classes="message user-message-content")
-				content_widget.styles.border_left = ("solid", user_color)
-				self.conversation_container.mount(content_widget)
+				content_widget.styles.margin_top = 1
+				content_widget.styles.padding_top = 1
+				message_container.mount(content_widget)
 			elif role == "assistant":
 				# Get model from message if available, otherwise from config
 				model = message.get("model")
@@ -127,12 +135,19 @@ class ConversationPanel(ScrollableContainer):
 				assistant_color = gptcli.ASSISTANT_COLOR or "green"
 				timestamp = message.get("response_timestamp", "")
 				
+				# Create wrapper container for entire message (header + content)
+				message_container = Vertical()
+				message_container.styles.border_left = ("solid", assistant_color)
+				message_container.styles.margin_bottom = 2
+				
+				# Mount message container first
+				self.conversation_container.mount(message_container)
+				
 				# Create header with Horizontal container
 				header_container = Horizontal()
-				header_container.styles.border_left = ("solid", assistant_color)
 				
-				# Mount header container first
-				self.conversation_container.mount(header_container)
+				# Mount header container to message container
+				message_container.mount(header_container)
 				
 				# Create Static with model name inside Horizontal (mounted first)
 				model_header = Text(f"{model}", style=f"bold {assistant_color}")
@@ -145,8 +160,9 @@ class ConversationPanel(ScrollableContainer):
 				
 				# Create content with Markdown
 				content_widget = Markdown(content, classes="message assistant-message-content")
-				content_widget.styles.border_left = ("solid", assistant_color)
-				self.conversation_container.mount(content_widget)
+				content_widget.styles.margin_top = 1
+				content_widget.styles.padding_top = 1
+				message_container.mount(content_widget)
 		
 		self.post_message(ScrollToBottom())
 
