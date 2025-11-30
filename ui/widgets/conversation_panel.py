@@ -95,16 +95,25 @@ class ConversationPanel(ScrollableContainer):
 			
 			if role == "user":
 				user_name = gptcli.USER_NAME or "You"
-				user_color = gptcli.USER_COLOR or "cyan"
 				
-				# Create header with user name
-				header_widget = Static(user_name, classes="message user-message-header")
-				header_widget.styles.border_left = ("solid", user_color)
-				self.conversation_container.mount(header_widget)
+				# Create header with Horizontal container
+				header_container = Horizontal()
+				
+				# Mount header container first
+				self.conversation_container.mount(header_container)
+				
+				# Create Static with user name inside Horizontal (mounted first)
+				name_widget = Static(user_name)
+				name_widget.styles.width = "1fr"
+				header_container.mount(name_widget)
+				
+				# Create Static with date inside Horizontal
+				date_widget = Static("30-Nov-2024 18:57:39")
+				date_widget.styles.width = "1fr"
+				header_container.mount(date_widget)
 				
 				# Create content
 				content_widget = Static(content, classes="message user-message-content")
-				content_widget.styles.border_left = ("solid", user_color)
 				self.conversation_container.mount(content_widget)
 			elif role == "assistant":
 				# Get model from message if available, otherwise from config
@@ -112,16 +121,25 @@ class ConversationPanel(ScrollableContainer):
 				if not model:
 					config = gptcli.load_chat_config(chat_name)
 					model = config.get("model", gptcli.DEFAULT_MODEL)
-				assistant_color = gptcli.ASSISTANT_COLOR or "green"
 				
-				# Create header with model name
-				header_widget = Static(model, classes="message assistant-message-header")
-				header_widget.styles.border_left = ("solid", assistant_color)
-				self.conversation_container.mount(header_widget)
+				# Create header with Horizontal container
+				header_container = Horizontal()
+				
+				# Mount header container first
+				self.conversation_container.mount(header_container)
+				
+				# Create Static with model name inside Horizontal (mounted first)
+				name_widget = Static(model)
+				name_widget.styles.width = "1fr"
+				header_container.mount(name_widget)
+				
+				# Create Static with date inside Horizontal
+				date_widget = Static("30-Nov-2024 18:57:39")
+				date_widget.styles.width = "1fr"
+				header_container.mount(date_widget)
 				
 				# Create content with Markdown
 				content_widget = Markdown(content, classes="message assistant-message-content")
-				content_widget.styles.border_left = ("solid", assistant_color)
 				self.conversation_container.mount(content_widget)
 		
 		self.post_message(ScrollToBottom())
