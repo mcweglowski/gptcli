@@ -142,6 +142,7 @@ class DummyContainer:
     def __init__(self, *args, **kwargs):
         self.mount = Mock()
         self.is_attached = True
+        self.styles = DummyStyles()
 
 
 class DummyStyles:

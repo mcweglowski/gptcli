@@ -100,6 +100,7 @@ class ConversationPanel(ScrollableContainer):
 				
 				# Create header with Horizontal container
 				header_container = Horizontal()
+				header_container.styles.border_left = ("solid", user_color)
 				
 				# Mount header container first
 				self.conversation_container.mount(header_container)
@@ -115,6 +116,7 @@ class ConversationPanel(ScrollableContainer):
 				
 				# Create content
 				content_widget = Static(content, classes="message user-message-content")
+				content_widget.styles.border_left = ("solid", user_color)
 				self.conversation_container.mount(content_widget)
 			elif role == "assistant":
 				# Get model from message if available, otherwise from config
@@ -127,6 +129,7 @@ class ConversationPanel(ScrollableContainer):
 				
 				# Create header with Horizontal container
 				header_container = Horizontal()
+				header_container.styles.border_left = ("solid", assistant_color)
 				
 				# Mount header container first
 				self.conversation_container.mount(header_container)
@@ -142,6 +145,7 @@ class ConversationPanel(ScrollableContainer):
 				
 				# Create content with Markdown
 				content_widget = Markdown(content, classes="message assistant-message-content")
+				content_widget.styles.border_left = ("solid", assistant_color)
 				self.conversation_container.mount(content_widget)
 		
 		self.post_message(ScrollToBottom())
